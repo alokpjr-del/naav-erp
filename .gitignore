@@ -1,5 +1,20 @@
+# Dependencies
 node_modules/
+
+# Environment files
 .env
+
+# SQLite Database
+data/*.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
