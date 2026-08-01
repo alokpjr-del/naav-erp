@@ -79,8 +79,8 @@
     <div id="loginPage" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100 backdrop-blur-xl">
             <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-lg shadow-blue-500/30 mb-4">
-                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                <div class="w-24 h-24 mx-auto mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-white shadow-lg shadow-blue-500/20 border border-slate-100">
+                    <img src="/assets/naav-logo.png" alt="NAAV logo" class="w-full h-full object-contain p-2" />
                 </div>
                 <h1 id="loginCompanyName" class="text-2xl font-bold text-slate-900 tracking-tight">NAAV ACCOUNTS</h1>
                 <p class="text-xs text-slate-500 mt-1 uppercase font-semibold tracking-wider">Enterprise Resource Planning</p>
@@ -187,6 +187,70 @@
                 <button type="button" onclick="closeDeleteRestSettlementModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Cancel</button>
                 <button type="button" onclick="confirmDeleteRestSettlement()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/20 transition">Delete</button>
             </div>
+        </div>
+    </div>
+
+    <!-- EDIT RESTAURANT SETTLEMENT MODAL -->
+    <div id="editRestSettlementModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xl border border-slate-100">
+            <h3 class="text-base font-bold text-slate-800 mb-4">Edit Restaurant Settlement</h3>
+            <form onsubmit="updateRestSettlement(event)" class="space-y-4">
+                <input type="hidden" id="editRestSettleId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Restaurant</label>
+                        <input type="text" id="editRestSettleVendor" readonly class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Period From</label>
+                        <input type="date" id="editRestSettleFrom" readonly class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Period To</label>
+                        <input type="date" id="editRestSettleTo" readonly class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pending Amount</label>
+                        <input type="text" id="editRestSettlePending" readonly class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Paid Amount</label>
+                        <input type="number" step="any" id="editRestSettlePaidAmount" oninput="calculateEditRestSettlementPreview()" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm font-bold text-emerald-600 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Outstanding</label>
+                        <input type="text" id="editRestSettleOutstanding" readonly class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-amber-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Payment Mode</label>
+                        <select id="editRestSettleMode" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Payment Date</label>
+                        <input type="date" id="editRestSettleDate" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Payment Status</label>
+                        <select id="editRestSettleStatus" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Remarks</label>
+                        <input type="text" id="editRestSettleRemarks" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Optional remarks">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeEditRestSettlementModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 transition">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1587,85 +1651,87 @@
         administrators: [], dayCloseHistory: [], orderCounter: 1, expenseCounter: 1
     };
 
+    function normalizeDbState(state) {
+        const normalized = state || {};
+        normalized.settings = normalized.settings || { companyName: 'NAAV ACCOUNTS', customCategories: [], lastBackupDate: 'Never' };
+        normalized.entries = normalized.entries || [];
+        normalized.expenses = normalized.expenses || [];
+        normalized.recycleBin = normalized.recycleBin || [];
+        normalized.restaurants = normalized.restaurants || [];
+        normalized.deliveryBoys = normalized.deliveryBoys || [];
+        normalized.customers = normalized.customers || [];
+        normalized.riderSettlements = normalized.riderSettlements || [];
+        normalized.restaurantSettlements = normalized.restaurantSettlements || [];
+        normalized.auditLog = normalized.auditLog || [];
+        normalized.administrators = normalized.administrators || [];
+        normalized.dayCloseHistory = normalized.dayCloseHistory || [];
+        normalized.orderCounter = normalized.orderCounter || 1;
+        normalized.expenseCounter = normalized.expenseCounter || 1;
+        if (!normalized.settings.customCategories) normalized.settings.customCategories = [];
+        if (!normalized.settings.lastBackupDate) normalized.settings.lastBackupDate = 'Never';
+        normalized.entries.forEach(e => {
+            if (!e.orderStatus) e.orderStatus = 'Pending';
+            if (!e.timeline) e.timeline = [{ action: 'Created', user: 'System', time: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString() }];
+        });
+        return normalized;
+    }
+
     async function fetchState() {
         try {
             const res = await fetch('/api/state');
-            db = await res.json();
-            if (!db.recycleBin) db.recycleBin = [];
-            if (!db.customers) db.customers = [];
-            if (!db.riderSettlements) db.riderSettlements = [];
-            if (!db.restaurantSettlements) db.restaurantSettlements = [];
-            if (!db.auditLog) db.auditLog = [];
-            if (!db.administrators) db.administrators = [];
-            if (!db.expenses) db.expenses = [];
-            if (!db.dayCloseHistory) db.dayCloseHistory = [];
+            if (!res.ok) throw new Error(`State request failed: ${res.status}`);
+            const payload = await res.json();
+            db = normalizeDbState(payload);
+            if (db.administrators.length === 0) {
+                db.administrators.push({
+                    id: 'ADM-DEFAULT',
+                    fullName: 'Naav',
+                    username: 'Naav',
+                    password: '9972',
+                    mobile: '9999999999',
+                    email: 'naav@admin.com',
+                    role: 'Super Administrator',
+                    status: 'Active',
+                    createdDate: new Date().toLocaleDateString(),
+                    modifiedDate: '-',
+                    lastLogin: '-',
+                    lastLogout: '-',
+                    createdBy: 'System',
+                    remarks: 'Default Super Admin'
+                });
+            }
         } catch (err) {
             console.error('Failed to fetch state', err);
         }
     }
 
-    // Dummy fallback for legacy saveDB
     async function saveDB() {
-        await fetchState();
+        try {
+            const snapshot = normalizeDbState(db);
+            const res = await fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(snapshot)
+            });
+            if (!res.ok) throw new Error(`Save request failed: ${res.status}`);
+            await fetchState();
+        } catch (err) {
+            console.error('Failed to save state', err);
+        }
     }
 
     // Initialize state on load
     window.addEventListener('DOMContentLoaded', async () => {
         await fetchState();
-    });
-
-    let _oldDb = {
-            settings: { companyName: 'NAAV ACCOUNTS', customCategories: [], lastBackupDate: 'Never' },
-            entries: [],
-            expenses: [],
-            recycleBin: [],
-            restaurants: [],
-            deliveryBoys: [],
-            customers: [],
-            riderSettlements: [],
-            restaurantSettlements: [],
-            auditLog: [],
-            administrators: [],
-            orderCounter: 1,
-            expenseCounter: 1
-        };
-
-        if (!db.recycleBin) db.recycleBin = [];
-        if (!db.customers) db.customers = [];
-        if (!db.riderSettlements) db.riderSettlements = [];
-        if (!db.restaurantSettlements) db.restaurantSettlements = [];
-        if (!db.auditLog) db.auditLog = [];
-        if (!db.administrators) db.administrators = [];
-        if (!db.expenses) db.expenses = [];
-        if (!db.dayCloseHistory) db.dayCloseHistory = [];
-        if (!db.settings.customCategories) db.settings.customCategories = [];
-        if (!db.settings.lastBackupDate) db.settings.lastBackupDate = 'Never';
-        if (!db.expenseCounter) db.expenseCounter = 1;
-
-        if (db.administrators.length === 0) {
-            db.administrators.push({
-                id: 'ADM-DEFAULT',
-                fullName: 'Naav',
-                username: 'Naav',
-                password: '9972',
-                mobile: '9999999999',
-                email: 'naav@admin.com',
-                role: 'Super Administrator',
-                status: 'Active',
-                createdDate: new Date().toLocaleDateString(),
-                modifiedDate: '-',
-                lastLogin: '-',
-                lastLogout: '-',
-                createdBy: 'System',
-                remarks: 'Default Super Admin'
-            });
+        const sessionRestored = restoreAuthSession();
+        if (sessionRestored) {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            initApp();
+        } else {
+            showLoginScreen();
         }
-        if (!db.orderCounter) db.orderCounter = 1;
-
-        db.entries.forEach(e => {
-            if (!e.orderStatus) e.orderStatus = 'Pending';
-            if (!e.timeline) e.timeline = [{ action: 'Created', user: 'System', time: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString() }];
-        });
+    });
 
         const defaultExpenseCategories = [
             'Petrol', 'Food Purchase', 'Office Rent', 'Electricity Bill', 'Internet Bill',
@@ -1683,8 +1749,46 @@
         let chartsInstance = {};
         let lastCreatedEntry = null;
 
-        function saveDB() {
-            // REST API persistence active
+        function getStoredAuthSession() {
+            try {
+                const stored = sessionStorage.getItem('naavAuthSession');
+                return stored ? JSON.parse(stored) : null;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function saveAuthSession() {
+            if (currentUser && currentAdminRecord) {
+                sessionStorage.setItem('naavAuthSession', JSON.stringify({ currentUser, currentAdminRecord }));
+            } else {
+                sessionStorage.removeItem('naavAuthSession');
+            }
+        }
+
+        function clearAuthSession() {
+            currentUser = null;
+            currentAdminRecord = null;
+            sessionStorage.removeItem('naavAuthSession');
+        }
+
+        function restoreAuthSession() {
+            const stored = getStoredAuthSession();
+            if (stored && stored.currentUser && stored.currentAdminRecord) {
+                currentUser = stored.currentUser;
+                currentAdminRecord = stored.currentAdminRecord;
+                return true;
+            }
+            clearAuthSession();
+            return false;
+        }
+
+        function showLoginScreen() {
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPass').value = '';
+            document.getElementById('loginError').classList.add('hidden');
         }
 
         function logAudit(action, details) {
@@ -1742,6 +1846,7 @@
                 if (res.ok && data.success) {
                     currentUser = data.admin.username;
                     currentAdminRecord = data.admin;
+                    saveAuthSession();
                     await fetchState();
                     document.getElementById('loginPage').classList.add('hidden');
                     document.getElementById('appContainer').classList.remove('hidden');
@@ -1771,14 +1876,9 @@
                 saveDB();
             }
             logAudit('Logout', `User logged out`);
-            currentUser = null;
-            currentAdminRecord = null;
+            clearAuthSession();
             closeLogoutModal();
-            document.getElementById('appContainer').classList.add('hidden');
-            document.getElementById('loginPage').classList.remove('hidden');
-            document.getElementById('loginUser').value = '';
-            document.getElementById('loginPass').value = '';
-            document.getElementById('loginError').classList.add('hidden');
+            showLoginScreen();
         }
 
         function promptClearAudit() {
@@ -2011,6 +2111,10 @@
         }
 
         function initApp() {
+            if (!currentUser || !currentAdminRecord) {
+                showLoginScreen();
+                return;
+            }
             buildSidebar();
             document.getElementById('sidebarCompanyName').innerText = db.settings.companyName || 'NAAV ACCOUNTS';
             document.getElementById('loginCompanyName').innerText = db.settings.companyName || 'NAAV ACCOUNTS';
@@ -2030,6 +2134,43 @@
         // ====================================================
         // DASHBOARD CALCULATIONS & RENDER
         // ====================================================
+        function parseCurrencyValue(value) {
+            if (value === null || value === undefined || value === '') return 0;
+            if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+            const cleaned = String(value).replace(/[₹,\s]/g, '');
+            const parsed = Number(cleaned);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function calculatePendingRestaurantPayments() {
+            const settlements = [...(db.restaurantSettlements || [])].sort((a, b) => {
+                const aDate = String(a.date || '');
+                const bDate = String(b.date || '');
+                if (aDate === bDate) {
+                    return String(a.id || '').localeCompare(String(b.id || ''));
+                }
+                return aDate.localeCompare(bDate);
+            });
+
+            const latestByVendor = new Map();
+            settlements.reverse().forEach((settlement) => {
+                const vendor = settlement.vendor;
+                if (!vendor || latestByVendor.has(vendor)) return;
+                const status = String(settlement.status || '').trim().toLowerCase();
+                const outstandingValue = settlement.outstandingAmount !== undefined && settlement.outstandingAmount !== ''
+                    ? settlement.outstandingAmount
+                    : settlement.pendingAmount;
+                const outstanding = parseCurrencyValue(outstandingValue);
+                if (status !== 'paid' && outstanding > 0) {
+                    latestByVendor.set(vendor, outstanding);
+                } else {
+                    latestByVendor.set(vendor, 0);
+                }
+            });
+
+            return Array.from(latestByVendor.values()).reduce((sum, value) => sum + value, 0);
+        }
+
         function loadDashboard() {
             const today = new Date().toISOString().split('T')[0];
             const currentMonthStr = today.substring(0, 7);
@@ -2041,7 +2182,7 @@
             const mondayStr = monday.toISOString().split('T')[0];
 
             let todaysOrders = 0;
-            let grossProfit = 0;
+            let todaysGrossProfit = 0;
             let weeklyProfit = 0;
             let monthlyProfit = 0;
 
@@ -2055,11 +2196,11 @@
             db.entries.forEach(e => {
                 const profit = Number(e.profit || 0);
                 const orderAmt = Number(e.vendorRate || 0);
-                grossProfit += profit;
                 totalOrderValue += orderAmt;
 
                 if (e.date === today) {
                     todaysOrders++;
+                    todaysGrossProfit += profit;
                 }
 
                 if (e.date >= mondayStr && e.date <= today) {
@@ -2089,19 +2230,9 @@
                 if (ex.date === today) todayExpenses += amt;
             });
 
-            let todaysNetProfit = (db.entries.filter(e => e.date === today).reduce((sum, e) => sum + Number(e.profit || 0), 0)) - todayExpenses;
+            let todaysNetProfit = todaysGrossProfit - todayExpenses;
 
-            let restPaidMap = {};
-            db.restaurantSettlements.forEach(rs => {
-                restPaidMap[rs.vendor] = (restPaidMap[rs.vendor] || 0) + Number(rs.paidAmount || 0);
-            });
-            let pendingRestPay = 0;
-            db.restaurants.forEach(r => {
-                const totalVendorRate = db.entries.filter(e => e.vendor === r.name).reduce((sum, e) => sum + Number(e.vendorRate || 0), 0);
-                const paid = restPaidMap[r.name] || 0;
-                const pend = totalVendorRate - paid;
-                if (pend > 0) pendingRestPay += pend;
-            });
+            let pendingRestPay = calculatePendingRestaurantPayments();
 
             let pendingRiderSettle = 0;
             const riderEarningsMap = {};
@@ -2145,7 +2276,7 @@
             let avgOrderValue = db.entries.length > 0 ? (totalOrderValue / db.entries.length) : 0;
 
             document.getElementById('dashTodaysOrders').innerText = todaysOrders;
-            document.getElementById('dashGrossProfit').innerText = '₹' + grossProfit.toFixed(2);
+            document.getElementById('dashGrossProfit').innerText = '₹' + todaysGrossProfit.toFixed(2);
             document.getElementById('dashTotalExpenses').innerText = '₹' + todayExpenses.toFixed(2);
             document.getElementById('dashNetProfit').innerText = '₹' + todaysNetProfit.toFixed(2);
             document.getElementById('dashWeeklyProfit').innerText = '₹' + weeklyProfit.toFixed(2);
@@ -2201,6 +2332,11 @@
             loadRestSettlements();
         }
 
+        function refreshSettlementRelatedViews() {
+            loadDashboard();
+            generateReport();
+        }
+
         function populateRestSettlementDropdowns() {
             const sel = document.getElementById('restSettleVendor');
             if (!sel) return;
@@ -2232,6 +2368,13 @@
             const paid = Number(document.getElementById('restSettlePaidAmount').value || 0);
             const outstanding = pending - paid;
             document.getElementById('restSettleOutstanding').value = '₹' + outstanding.toFixed(2);
+        }
+
+        function calculateEditRestSettlementPreview() {
+            const pending = parseCurrencyValue(document.getElementById('editRestSettlePending').value);
+            const paid = Number(document.getElementById('editRestSettlePaidAmount').value || 0);
+            const outstanding = pending - paid;
+            document.getElementById('editRestSettleOutstanding').value = '₹' + outstanding.toFixed(2);
         }
 
         function handleSaveRestSettlement(e) {
@@ -2270,6 +2413,8 @@
                 logAudit('Restaurant Settlement Saved', `Restaurant: ${vendor}, Paid: ₹${paidAmount}`);
                 saveDB();
                 loadRestSettlements();
+                loadDashboard();
+                generateReport();
                 alert('Restaurant settlement saved successfully.');
                 showRestSettlementReceiptModal(settlement);
             });
@@ -2289,6 +2434,7 @@
                 let actionsHtml = '';
                 if (role !== 'Operator' && role !== 'Viewer') {
                     actionsHtml = `
+                        <button onclick="editRestSettlementSecurityCheck('${s.id}')" class="text-blue-600 hover:text-blue-800 p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button onclick="deleteRestSettlementSecurityCheck('${s.id}')" class="text-rose-600 hover:text-rose-800 p-1" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     `;
                 }
@@ -2312,6 +2458,57 @@
             });
         }
 
+        function editRestSettlementSecurityCheck(id) {
+            const role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
+            if (role === 'Operator' || role === 'Viewer') {
+                alert('You do not have permission to edit settlements.');
+                return;
+            }
+            requestSecurityCheck(() => {
+                const s = db.restaurantSettlements.find(x => x.id === id);
+                if (!s) return;
+                document.getElementById('editRestSettleId').value = s.id;
+                document.getElementById('editRestSettleVendor').value = s.vendor || '';
+                document.getElementById('editRestSettleFrom').value = s.from || '';
+                document.getElementById('editRestSettleTo').value = s.to || '';
+                document.getElementById('editRestSettlePending').value = s.pendingAmount || '';
+                document.getElementById('editRestSettlePaidAmount').value = Number(s.paidAmount || 0).toString();
+                document.getElementById('editRestSettleOutstanding').value = s.outstandingAmount || '';
+                document.getElementById('editRestSettleMode').value = s.mode || 'Cash';
+                document.getElementById('editRestSettleDate').value = s.date || '';
+                document.getElementById('editRestSettleStatus').value = s.status || 'Paid';
+                document.getElementById('editRestSettleRemarks').value = s.remarks || '';
+                calculateEditRestSettlementPreview();
+                document.getElementById('editRestSettlementModal').classList.remove('hidden');
+            });
+        }
+
+        function closeEditRestSettlementModal() {
+            document.getElementById('editRestSettlementModal').classList.add('hidden');
+        }
+
+        function updateRestSettlement(e) {
+            e.preventDefault();
+            const id = document.getElementById('editRestSettleId').value;
+            const s = db.restaurantSettlements.find(x => x.id === id);
+            if (!s) return;
+
+            s.paidAmount = document.getElementById('editRestSettlePaidAmount').value;
+            s.outstandingAmount = document.getElementById('editRestSettleOutstanding').value;
+            s.mode = document.getElementById('editRestSettleMode').value;
+            s.date = document.getElementById('editRestSettleDate').value;
+            s.status = document.getElementById('editRestSettleStatus').value;
+            s.remarks = document.getElementById('editRestSettleRemarks').value;
+
+            logAudit('Restaurant Settlement Edited', `ID: ${s.id}`);
+            saveDB();
+            closeEditRestSettlementModal();
+            loadRestSettlements();
+            loadDashboard();
+            generateReport();
+            alert('Restaurant settlement updated successfully.');
+        }
+
         function deleteRestSettlementSecurityCheck(id) {
             requestSecurityCheck(() => {
                 pendingDeleteRestSettlementId = id;
@@ -2332,6 +2529,8 @@
                 logAudit('Restaurant Settlement Deleted', `ID: ${s.id}`);
                 saveDB();
                 loadRestSettlements();
+                loadDashboard();
+                generateReport();
             }
             closeDeleteRestSettlementModal();
         }
@@ -2363,8 +2562,31 @@
         }
 
         function shareWhatsAppRestSettlement(s) {
-            const msg = `*RESTAURANT SETTLEMENT - ${db.settings.companyName || 'NAAV ACCOUNTS'}*%0ARestaurant : ${s.vendor}%0APeriod : ${s.from} to ${s.to}%0AOrders : ${s.orders}%0APending Amount : ${s.pendingAmount}%0APaid Amount : ₹${Number(s.paidAmount).toFixed(2)}%0AOutstanding : ${s.outstandingAmount}%0AMode : ${s.mode}%0AStatus : ${s.status}%0ARemarks : ${s.remarks || '-'}`;
-            window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+            const restaurant = db.restaurants.find(r => r.name === s.vendor) || null;
+            const mobile = restaurant && restaurant.mobile ? String(restaurant.mobile).replace(/[^0-9]/g, '') : '';
+            if (!mobile) {
+                alert('Restaurant mobile number is missing. Please add a mobile number before sharing via WhatsApp.');
+                return;
+            }
+
+            const message = [
+                `Restaurant Settlement Receipt`,
+                ``,
+                `Restaurant Name: ${s.vendor}`,
+                `Period: ${s.from} to ${s.to}`,
+                `Total Orders: ${s.orders}`,
+                `Pending Amount: ${s.pendingAmount}`,
+                `Paid Amount: ₹${Number(s.paidAmount).toFixed(2)}`,
+                `Outstanding Amount: ${s.outstandingAmount}`,
+                `Payment Mode: ${s.mode}`,
+                `Payment Status: ${s.status}`,
+                `Remarks: ${s.remarks || '-'}`
+            ].join('\n');
+
+            const encodedMessage = encodeURIComponent(message);
+            const waUrl = `https://wa.me/${mobile}?text=${encodedMessage}`;
+            const popup = window.open(waUrl, '_blank', 'noopener,noreferrer');
+            if (!popup) window.location.href = waUrl;
         }
 
         function shareWhatsAppRestSettlementById(id) {
@@ -2882,6 +3104,7 @@
             saveDB();
             closeEntryModal();
             loadEntries();
+            loadDashboard();
 
             if (isNew) {
                 lastCreatedEntry = entry;
@@ -3017,6 +3240,7 @@
                 logAudit('Delete Entry', `Order ID: ${removed.orderId}`);
                 saveDB();
                 loadEntries();
+                loadDashboard();
             }
             closeDeleteModal();
         }
@@ -3619,6 +3843,8 @@
                 logAudit('Settlement', `Rider Settlement Saved: Rider ${rider}, Net: ${netPayable}`);
                 saveDB();
                 loadSettlements();
+                loadDashboard();
+                generateReport();
                 alert('Rider settlement saved successfully.');
                 shareWhatsAppSettlement(settlement);
             });
@@ -3723,6 +3949,8 @@
             saveDB();
             closeEditSettlementModal();
             loadSettlements();
+            loadDashboard();
+            generateReport();
             alert('Settlement updated successfully.');
         }
 
@@ -3757,13 +3985,17 @@
                 logAudit('Settlement', `Rider Settlement Deleted ID: ${id}`);
                 saveDB();
                 loadSettlements();
+                loadDashboard();
+                generateReport();
             }
             closeDeleteSettlementModal();
         }
 
         function shareWhatsAppSettlement(s) {
             const msg = `*NAAV DELIVERY*%0ARider : ${s.rider}%0APeriod%0A${s.from} to ${s.to}%0AOrders : ${s.orders}%0ADelivery Earnings : ${s.earnings}%0ABonus : ₹${s.bonus}%0AFine : ₹${s.fine}%0AAdvance : ₹${s.advance}%0ANet Payment : ${s.netPayable}%0A%0AThank You%0ANAAV Delivery`;
-            window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+            const url = `https://api.whatsapp.com/send?text=${msg}`;
+            const popup = window.open(url, '_blank', 'noopener,noreferrer');
+            if (!popup) window.location.href = url;
         }
 
         function shareWhatsAppSettlementById(id) {

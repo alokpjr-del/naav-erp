@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../db');
 
 router.get('/', (req, res) => {
-    db.all(`SELECT * FROM restaurantSettlements`, (err, rows) => { res.json(rows); });
+    db.all(`SELECT * FROM restaurantSettlements ORDER BY date DESC, id DESC`, (err, rows) => { res.json(rows); });
 });
 
 router.post('/', (req, res) => {

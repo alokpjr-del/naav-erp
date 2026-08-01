@@ -104,6 +104,30 @@ function initTables() {
             createdDateTime TEXT
         )`);
 
+        db.run(`CREATE TABLE IF NOT EXISTS riders (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            mobile TEXT,
+            status TEXT
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS customers (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            mobile TEXT,
+            address TEXT,
+            email TEXT,
+            remarks TEXT,
+            createdDate TEXT
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS recycleBin (
+            id TEXT PRIMARY KEY,
+            type TEXT,
+            data TEXT,
+            deletedAt TEXT
+        )`);
+
         db.run(`CREATE TABLE IF NOT EXISTS riderSettlements (
             id TEXT PRIMARY KEY,
             rider TEXT,
