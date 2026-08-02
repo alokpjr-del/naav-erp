@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+const { testConnection } = require('./src/postgres');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -30,6 +32,12 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`NAAV ERP Backend running on port ${PORT}`);
+
+    try {
+        await testConnection();
+    } catch (err) {
+        console.error('PostgreSQL connection failed:', err.message);
+    }
 });
