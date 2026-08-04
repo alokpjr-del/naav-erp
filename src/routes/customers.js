@@ -1,35 +1,102 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../postgres');
 
-router.get('/', (req, res) => {
-    db.all(`SELECT * FROM customers ORDER BY name`, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows || []);
-    });
+// Get All Customers
+router.get('/', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT * FROM customers ORDER BY name`
+        );
+
+        res.json(result.rows || []);
+
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
 });
 
-router.post('/', (req, res) => {
+// Add / Update Customer
+router.post('/', async (req, res) => {
+
     const customer = req.body || {};
-    db.run(`INSERT OR REPLACE INTO customers (id, name, mobile, address, email, remarks, createdDate) VALUES (?, ?, ?, ?, ?, ?, ?)`, [
-        customer.id,
-        customer.name,
-        customer.mobile,
-        customer.address,
-        customer.email,
-        customer.remarks,
-        customer.createdDate || new Date().toISOString()
-    ], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, id: customer.id });
-    });
+
+    try {
+
+        await pool.query(
+            `INSERT INTO customers (
+                id,
+                name,
+                mobile,
+                address,
+                email,
+                remarks,
+                createdDate
+            )
+            VALUES (
+                $1,$2,$3,$4,$5,$6,$7
+            )
+            ON CONFLICT (id)
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                mobile = EXCLUDED.mobile,
+                address = EXCLUDED.address,
+                email = EXCLUDED.email,
+                remarks = EXCLUDED.remarks`,
+            [
+                customer.id,
+                customer.name,
+                customer.mobile,
+                customer.address,
+                customer.email,
+                customer.remarks,
+                customer.createdDate || new Date().toISOString()
+            ]
+        );
+
+        res.json({
+            success: true,
+            id: customer.id
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
 });
 
-router.delete('/:id', (req, res) => {
-    db.run(`DELETE FROM customers WHERE id = ?`, [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, changes: this.changes });
-    });
+// Delete Customer
+router.delete('/:id', async (req, res) => {
+
+    try {
+
+        const result = await pool.query(
+            `DELETE FROM customers WHERE id = $1`,
+            [req.params.id]
+        );
+
+        res.json({
+            success: true,
+            changes: result.rowCount
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
 });
 
 module.exports = router;

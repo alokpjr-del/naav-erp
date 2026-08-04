@@ -1,18 +1,88 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../postgres');
 
-router.get('/', (req, res) => {
-    db.all(`SELECT * FROM deliveryBoys`, (err, rows) => { res.json(rows); });
+// Get All Delivery Boys
+router.get('/', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT * FROM deliveryBoys ORDER BY name`
+        );
+
+        res.json(result.rows);
+
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
 });
 
-router.post('/', (req, res) => {
-    const d = req.body;
-    db.run(`INSERT OR REPLACE INTO deliveryBoys (id, name) VALUES (?, ?)`, [d.id, d.name], () => { res.json({ success: true }); });
+// Add / Update Delivery Boy
+router.post('/', async (req, res) => {
+
+    const d = req.body || {};
+
+    try {
+
+        await pool.query(
+            `INSERT INTO deliveryBoys (
+                id,
+                name
+            )
+            VALUES ($1,$2)
+            ON CONFLICT (id)
+            DO UPDATE
+            SET
+                name = EXCLUDED.name`,
+            [
+                d.id,
+                d.name
+            ]
+        );
+
+        res.json({
+            success: true
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
 });
 
-router.delete('/:id', (req, res) => {
-    db.run(`DELETE FROM deliveryBoys WHERE id = ?`, [req.params.id], () => { res.json({ success: true }); });
+// Delete Delivery Boy
+router.delete('/:id', async (req, res) => {
+
+    try {
+
+        const result = await pool.query(
+            `DELETE FROM deliveryBoys WHERE id=$1`,
+            [
+                req.params.id
+            ]
+        );
+
+        res.json({
+            success: true,
+            changes: result.rowCount
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
 });
 
 module.exports = router;

@@ -1,61 +1,168 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../postgres');
 
-router.get('/', (req, res) => {
-    db.all(`SELECT * FROM restaurants ORDER BY name`, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows || []);
-    });
+// Get All Restaurants
+router.get('/', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT * FROM restaurants ORDER BY name`
+        );
+
+        res.json(result.rows || []);
+
+    } catch (err) {
+        res.status(500).json({
+            error: err.message
+        });
+    }
 });
 
-router.post('/', (req, res) => {
+// Add / Update Restaurant
+router.post('/', async (req, res) => {
+
     const restaurant = req.body || {};
-    db.run(`INSERT OR REPLACE INTO restaurants (id, name, contactPerson, mobile, altMobile, address, gst, email, openTime, closeTime, status, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-        restaurant.id,
-        restaurant.name,
-        restaurant.contactPerson,
-        restaurant.mobile,
-        restaurant.altMobile,
-        restaurant.address,
-        restaurant.gst,
-        restaurant.email,
-        restaurant.openTime,
-        restaurant.closeTime,
-        restaurant.status,
-        restaurant.remarks
-    ], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, id: restaurant.id });
-    });
+
+    try {
+
+        await pool.query(
+            `INSERT INTO restaurants (
+                id,
+                name,
+                contactPerson,
+                mobile,
+                altMobile,
+                address,
+                gst,
+                email,
+                openTime,
+                closeTime,
+                status,
+                remarks
+            )
+            VALUES (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12
+            )
+            ON CONFLICT (id)
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                contactPerson = EXCLUDED.contactPerson,
+                mobile = EXCLUDED.mobile,
+                altMobile = EXCLUDED.altMobile,
+                address = EXCLUDED.address,
+                gst = EXCLUDED.gst,
+                email = EXCLUDED.email,
+                openTime = EXCLUDED.openTime,
+                closeTime = EXCLUDED.closeTime,
+                status = EXCLUDED.status,
+                remarks = EXCLUDED.remarks`,
+            [
+                restaurant.id,
+                restaurant.name,
+                restaurant.contactPerson,
+                restaurant.mobile,
+                restaurant.altMobile,
+                restaurant.address,
+                restaurant.gst,
+                restaurant.email,
+                restaurant.openTime,
+                restaurant.closeTime,
+                restaurant.status,
+                restaurant.remarks
+            ]
+        );
+
+        res.json({
+            success: true,
+            id: restaurant.id
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
 });
 
-router.put('/:id', (req, res) => {
+// Update Restaurant
+router.put('/:id', async (req, res) => {
+
     const restaurant = req.body || {};
-    db.run(`UPDATE restaurants SET name = ?, contactPerson = ?, mobile = ?, altMobile = ?, address = ?, gst = ?, email = ?, openTime = ?, closeTime = ?, status = ?, remarks = ? WHERE id = ?`, [
-        restaurant.name,
-        restaurant.contactPerson,
-        restaurant.mobile,
-        restaurant.altMobile,
-        restaurant.address,
-        restaurant.gst,
-        restaurant.email,
-        restaurant.openTime,
-        restaurant.closeTime,
-        restaurant.status,
-        restaurant.remarks,
-        req.params.id
-    ], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, changes: this.changes });
-    });
+
+    try {
+
+        const result = await pool.query(
+            `UPDATE restaurants
+             SET
+                name=$1,
+                contactPerson=$2,
+                mobile=$3,
+                altMobile=$4,
+                address=$5,
+                gst=$6,
+                email=$7,
+                openTime=$8,
+                closeTime=$9,
+                status=$10,
+                remarks=$11
+             WHERE id=$12`,
+            [
+                restaurant.name,
+                restaurant.contactPerson,
+                restaurant.mobile,
+                restaurant.altMobile,
+                restaurant.address,
+                restaurant.gst,
+                restaurant.email,
+                restaurant.openTime,
+                restaurant.closeTime,
+                restaurant.status,
+                restaurant.remarks,
+                req.params.id
+            ]
+        );
+
+        res.json({
+            success: true,
+            changes: result.rowCount
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
 });
 
-router.delete('/:id', (req, res) => {
-    db.run(`DELETE FROM restaurants WHERE id = ?`, [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, changes: this.changes });
-    });
+// Delete Restaurant
+router.delete('/:id', async (req, res) => {
+
+    try {
+
+        const result = await pool.query(
+            `DELETE FROM restaurants WHERE id=$1`,
+            [req.params.id]
+        );
+
+        res.json({
+            success: true,
+            changes: result.rowCount
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
 });
 
 module.exports = router;
