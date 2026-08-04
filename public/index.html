@@ -1681,6 +1681,10 @@
             const res = await fetch('/api/state');
             if (!res.ok) throw new Error(`State request failed: ${res.status}`);
             const payload = await res.json();
+            console.log("STATE RESPONSE:", payload);
+            console.log("RESTAURANTS:", payload.restaurants);
+
+            
             db = normalizeDbState(payload);
             if (db.administrators.length === 0) {
                 db.administrators.push({
