@@ -112,7 +112,7 @@ async function saveSnapshot(snapshot) {
 
         await client.query('DELETE FROM auditLog');
         for (const log of state.auditLog || []) {
-            await client.query(`INSERT INTO auditLog (id, date, time, user, action, details) VALUES ($1, $2, $3, $4, $5, $6)`, [
+            await client.query(`INSERT INTO auditLog (id, date, time, "user", action, details) VALUES ($1, $2, $3, $4, $5, $6)`, [
                 log.id || null, log.date, log.time, log.user, log.action, log.details
             ]);
         }
@@ -138,6 +138,11 @@ async function saveSnapshot(snapshot) {
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
+
+        console.error("========== STATE SAVE ERROR ==========");
+        console.error(e);
+        console.error(e.stack);
+
         throw e;
     } finally {
         client.release();
@@ -232,7 +237,15 @@ router.post('/', async (req, res) => {
         await saveSnapshot(req.body || {});
         res.json({ success: true });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+
+        console.error("POST /api/state FAILED");
+        console.error(e);
+        console.error(e.stack);
+
+        res.status(500).json({
+            success: false,
+            error: e.message
+        });
     }
 });
 
