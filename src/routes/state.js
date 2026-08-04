@@ -54,7 +54,7 @@ async function saveSnapshot(snapshot) {
                 entry.upi,
                 entry.naavTransferred,
                 entry.orderStatus || 'Pending',
-                Boolean(entry.isSettled),
+                Boolean(entry.isSettled) ? 1 : 0,
                 entry.paidDate,
                 entry.paidTime,
                 entry.paidBy,
