@@ -220,7 +220,20 @@ async function initTables() {
                 ON CONFLICT (name) DO NOTHING
             `);
 
-            const hashedPassword = await bcrypt.hash('9972', 10);
+            // SECURITY NOTE: this seeds a default super-admin account
+            // ('Naav' / DEFAULT_ADMIN_PASSWORD, falling back to the
+            // existing '9972' default) exactly once — the ON CONFLICT (id)
+            // DO NOTHING below means this INSERT is a no-op on every boot
+            // after the very first one, so setting DEFAULT_ADMIN_PASSWORD
+            // later will NOT retroactively change an already-created
+            // admin's password (no breaking change for existing
+            // deployments). If this app is already live, change the
+            // 'Naav' account's password from the app itself (or rotate it
+            // directly in the database) — shipping a hardcoded default
+            // credential in source control is a known attack vector once
+            // a repo/image is anything less than fully private.
+            const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || '9972';
+            const hashedPassword = await bcrypt.hash(defaultAdminPassword, 10);
             await client.query(`
                 INSERT INTO administrators (id, "fullName", username, password, mobile, email, role, status, "createdDate", "modifiedDate", "lastLogin", "lastLogout", "createdBy", remarks) 
                 VALUES ('ADM-DEFAULT', 'Naav', 'Naav', $1, '9999999999', 'naav@admin.com', 'Super Administrator', 'Active', $2, '-', '-', '-', 'System', 'Default Super Admin')

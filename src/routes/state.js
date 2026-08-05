@@ -42,6 +42,28 @@ function parseJson(value, fallback = []) {
 // auditLog, dayCloseHistory).
 // ---------------------------------------------------------------------------
 
+// Every table below has a NOT NULL primary key (TEXT id for most, or
+// SERIAL for auditLog, or TEXT date for dayCloseHistory). We already hit
+// this exact failure mode in production for auditLog.id (NULL insert into
+// a NOT NULL column). The same class of bug can happen for any of these
+// tables if the frontend ever sends a row without its id/date set — and
+// because saveSnapshot() runs the whole save as one transaction, a single
+// bad row currently rolls back EVERY other legitimate change in that same
+// save. This helper filters out and logs rows missing their required key
+// instead of letting them abort the entire snapshot, without changing any
+// behavior for well-formed rows (the normal, currently-working case).
+function withRequiredKey(rows, key, label) {
+    const valid = [];
+    for (const row of rows || []) {
+        if (row && row[key] !== undefined && row[key] !== null && row[key] !== '') {
+            valid.push(row);
+        } else {
+            console.warn(`saveSnapshot: skipping "${label}" row with missing "${key}"`, row);
+        }
+    }
+    return valid;
+}
+
 async function saveSnapshot(snapshot) {
     const client = await pool.connect();
     try {
@@ -59,7 +81,7 @@ async function saveSnapshot(snapshot) {
         }
 
         await client.query('DELETE FROM entries');
-        for (const entry of state.entries || []) {
+        for (const entry of withRequiredKey(state.entries, 'id', 'entries')) {
             await client.query(`INSERT INTO entries (
                 id, "orderId", date, "customerName", "customerMobile", "customerAddress", vendor, "vendorRate", location, category, "onlineRate", percentage, "deliveryCharge", profit, "deliveryBoy", cash, upi, "naavTransferred", "orderStatus", "isSettled", "paidDate", "paidTime", "paidBy", remarks, timeline
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`, [
@@ -92,47 +114,47 @@ async function saveSnapshot(snapshot) {
         }
 
         await client.query('DELETE FROM expenses');
-        for (const expense of state.expenses || []) {
+        for (const expense of withRequiredKey(state.expenses, 'id', 'expenses')) {
             await client.query(`INSERT INTO expenses (id, "expenseId", date, category, "expenseName", amount, "paymentMode", "paidTo", "refNo", remarks, "createdBy", "createdDateTime") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, [
                 expense.id, expense.expenseId, expense.date, expense.category, expense.expenseName, expense.amount, expense.paymentMode, expense.paidTo, expense.refNo, expense.remarks, expense.createdBy, expense.createdDateTime
             ]);
         }
 
         await client.query('DELETE FROM restaurants');
-        for (const restaurant of state.restaurants || []) {
+        for (const restaurant of withRequiredKey(state.restaurants, 'id', 'restaurants')) {
             await client.query(`INSERT INTO restaurants (id, name, "contactPerson", mobile, "altMobile", address, gst, email, "openTime", "closeTime", status, remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, [
                 restaurant.id, restaurant.name, restaurant.contactPerson, restaurant.mobile, restaurant.altMobile, restaurant.address, restaurant.gst, restaurant.email, restaurant.openTime, restaurant.closeTime, restaurant.status, restaurant.remarks
             ]);
         }
 
         await client.query('DELETE FROM "deliveryBoys"');
-        for (const boy of state.deliveryBoys || []) {
+        for (const boy of withRequiredKey(state.deliveryBoys, 'id', 'deliveryBoys')) {
             await client.query(`INSERT INTO "deliveryBoys" (id, name) VALUES ($1, $2)`, [boy.id, boy.name]);
         }
 
         await client.query('DELETE FROM customers');
-        for (const customer of state.customers || []) {
+        for (const customer of withRequiredKey(state.customers, 'id', 'customers')) {
             await client.query(`INSERT INTO customers (id, name, mobile, address, email, remarks, "createdDate") VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
                 customer.id, customer.name, customer.mobile, customer.address, customer.email, customer.remarks, customer.createdDate
             ]);
         }
 
         await client.query('DELETE FROM "recycleBin"');
-        for (const item of state.recycleBin || []) {
+        for (const item of withRequiredKey(state.recycleBin, 'id', 'recycleBin')) {
             await client.query(`INSERT INTO "recycleBin" (id, type, data, "deletedAt") VALUES ($1, $2, $3, $4)`, [
                 item.id, item.type, JSON.stringify(item.data || item), item.deletedAt
             ]);
         }
 
         await client.query('DELETE FROM "riderSettlements"');
-        for (const settlement of state.riderSettlements || []) {
+        for (const settlement of withRequiredKey(state.riderSettlements, 'id', 'riderSettlements')) {
             await client.query(`INSERT INTO "riderSettlements" (id, rider, from_date, to_date, orders, earnings, bonus, fine, advance, "netPayable", mode, date, status, remarks, "settledOrderIds") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`, [
                 settlement.id, settlement.rider, settlement.from, settlement.to, settlement.orders, settlement.earnings, settlement.bonus, settlement.fine, settlement.advance, settlement.netPayable, settlement.mode, settlement.date, settlement.status, settlement.remarks, JSON.stringify(settlement.settledOrderIds || [])
             ]);
         }
 
         await client.query('DELETE FROM "restaurantSettlements"');
-        for (const settlement of state.restaurantSettlements || []) {
+        for (const settlement of withRequiredKey(state.restaurantSettlements, 'id', 'restaurantSettlements')) {
             await client.query(`INSERT INTO "restaurantSettlements" (id, vendor, from_date, to_date, orders, "pendingAmount", "paidAmount", "outstandingAmount", mode, date, status, remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, [
                 settlement.id, settlement.vendor, settlement.from, settlement.to, settlement.orders, settlement.pendingAmount, settlement.paidAmount, settlement.outstandingAmount, settlement.mode, settlement.date, settlement.status, settlement.remarks
             ]);
@@ -163,14 +185,14 @@ async function saveSnapshot(snapshot) {
         }
 
         await client.query('DELETE FROM administrators');
-        for (const admin of state.administrators || []) {
+        for (const admin of withRequiredKey(state.administrators, 'id', 'administrators')) {
             await client.query(`INSERT INTO administrators (id, "fullName", username, password, mobile, email, role, status, "createdDate", "modifiedDate", "lastLogin", "lastLogout", "createdBy", remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`, [
                 admin.id, admin.fullName, admin.username, admin.password, admin.mobile, admin.email, admin.role, admin.status, admin.createdDate, admin.modifiedDate, admin.lastLogin, admin.lastLogout, admin.createdBy, admin.remarks
             ]);
         }
 
         await client.query('DELETE FROM "dayCloseHistory"');
-        for (const history of state.dayCloseHistory || []) {
+        for (const history of withRequiredKey(state.dayCloseHistory, 'date', 'dayCloseHistory')) {
             await client.query(`INSERT INTO "dayCloseHistory" (date, "totalOrders", "totalSales", "totalProfit", "totalExpenses", "netProfit", "closedBy", "closedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [
                 history.date, history.totalOrders, history.totalSales, history.totalProfit, history.totalExpenses, history.netProfit, history.closedBy, history.closedAt
             ]);
@@ -293,8 +315,20 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+    // Guards against the edge case where req.body isn't a plain object
+    // (e.g. an array, a string, or missing entirely). Without this, code
+    // like `state.entries` on an array silently resolves to Array's own
+    // built-in `.entries` method instead of `undefined`, which then fails
+    // deep inside the transaction with a confusing "not iterable" error
+    // instead of a clear 400. This does not change behavior for any
+    // request shaped like the normal snapshot object the frontend sends.
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return res.status(400).json({ success: false, error: 'Request body must be a JSON object' });
+    }
+
     try {
-        await saveSnapshot(req.body || {});
+        await saveSnapshot(body);
         res.json({ success: true });
     } catch (e) {
         console.error("POST /api/state FAILED");
