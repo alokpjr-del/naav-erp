@@ -3390,12 +3390,12 @@
             tbody.innerHTML = '';
             const q = document.getElementById('adminSearch') ? document.getElementById('adminSearch').value.toLowerCase() : '';
             
-            const filtered = db.administrators.filter(a => 
-                a.fullName.toLowerCase().includes(q) || 
-                a.username.toLowerCase().includes(q) || 
-                a.mobile.toLowerCase().includes(q) ||
-                a.role.toLowerCase().includes(q) ||
-                a.status.toLowerCase().includes(q)
+            const filtered = db.administrators.filter(a =>
+                (a.fullName || '').toLowerCase().includes(q) ||
+                (a.username || '').toLowerCase().includes(q) ||
+                (a.mobile || '').toLowerCase().includes(q) ||
+                (a.role || '').toLowerCase().includes(q) ||
+                (a.status || '').toLowerCase().includes(q)
             );
 
             const total = db.administrators.length;
