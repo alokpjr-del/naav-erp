@@ -1,7 +1,7 @@
 // src/routes/auth.js
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { pool } = require('../postgres');
 
 router.post('/login', async (req, res) => {
