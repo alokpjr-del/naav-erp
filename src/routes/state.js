@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../postgres');
+const bcrypt = require('bcryptjs');
 
 function parseJson(value, fallback = []) {
     if (!value) return fallback;
@@ -186,8 +187,14 @@ async function saveSnapshot(snapshot) {
 
         await client.query('DELETE FROM administrators');
         for (const admin of withRequiredKey(state.administrators, 'id', 'administrators')) {
+            let passwordToStore = admin.password || '';
+            const isAlreadyHashed = passwordToStore.startsWith('$2a$') || passwordToStore.startsWith('$2b$');
+            if (!isAlreadyHashed) {
+                passwordToStore = await bcrypt.hash(passwordToStore, 10);
+            }
+
             await client.query(`INSERT INTO administrators (id, "fullName", username, password, mobile, email, role, status, "createdDate", "modifiedDate", "lastLogin", "lastLogout", "createdBy", remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`, [
-                admin.id, admin.fullName, admin.username, admin.password, admin.mobile, admin.email, admin.role, admin.status, admin.createdDate, admin.modifiedDate, admin.lastLogin, admin.lastLogout, admin.createdBy, admin.remarks
+                admin.id, admin.fullName, admin.username, passwordToStore, admin.mobile, admin.email, admin.role, admin.status, admin.createdDate, admin.modifiedDate, admin.lastLogin, admin.lastLogout, admin.createdBy, admin.remarks
             ]);
         }
 
