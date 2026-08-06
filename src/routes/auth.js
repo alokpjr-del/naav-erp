@@ -1,27 +1,40 @@
+// src/routes/auth.js
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const bcrypt = require('bcrypt');
+const { pool } = require('../postgres');
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    db.get(`SELECT * FROM administrators WHERE username = ? AND password = ?`, [username, password], (err, admin) => {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        const result = await pool.query('SELECT * FROM administrators WHERE username = $1', [username]);
+        const admin = result.rows[0];
+
         if (!admin) return res.status(401).json({ error: 'Invalid Username or Password' });
+
+        const match = await bcrypt.compare(password, admin.password);
+        if (!match) return res.status(401).json({ error: 'Invalid Username or Password' });
+
         if (admin.status !== 'Active') return res.status(403).json({ error: 'Account is inactive' });
 
         const now = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
-        db.run(`UPDATE administrators SET lastLogin = ? WHERE id = ?`, [now, admin.id], () => {
-            res.json({ success: true, admin });
-        });
-    });
+        await pool.query('UPDATE administrators SET "lastLogin" = $1 WHERE id = $2', [now, admin.id]);
+        
+        res.json({ success: true, admin });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
     const { username } = req.body;
     const now = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
-    db.run(`UPDATE administrators SET lastLogout = ? WHERE username = ?`, [now, username], () => {
+    try {
+        await pool.query('UPDATE administrators SET "lastLogout" = $1 WHERE username = $2', [now, username]);
         res.json({ success: true });
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;
