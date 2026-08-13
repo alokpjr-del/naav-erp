@@ -6769,9 +6769,38 @@
             if (!container) return;
             let pendingItems = [];
             
-            // Unsettled Restaurant Orders
-            (db.entries || []).filter(e => e.vendor && !e.isRestSettled).forEach(e => {
-                pendingItems.push({ type: 'Restaurant', ref: e.orderId || e.id, entity: e.vendor, amount: Number(e.vendorRate || 0), date: e.date, mode: e.paymentMode || 'Cash', status: 'Pending' });
+            // Unsettled / Partially Settled Restaurant Orders
+            (db.entries || []).forEach(e => {
+                if (!e.vendor) return;
+                const eDate = typeof normalizeDateStr === 'function' ? normalizeDateStr(e.date) : e.date;
+
+                const matchingSettlements = (db.restaurantSettlements || []).filter(s => {
+                    if (s.vendor !== e.vendor) return false;
+                    const from = typeof normalizeDateStr === 'function' ? normalizeDateStr(s.from) : s.from;
+                    const to = typeof normalizeDateStr === 'function' ? normalizeDateStr(s.to) : s.to;
+                    return eDate >= from && eDate <= to;
+                });
+
+                if (matchingSettlements.length > 0) {
+                    const isFullyPaid = matchingSettlements.some(s => 
+                        String(s.status || '').toLowerCase() === 'paid' || Number(s.outstandingAmount !== undefined ? s.outstandingAmount : s.pendingAmount) <= 0
+                    );
+                    if (isFullyPaid) return;
+
+                    const lastSettlement = matchingSettlements[matchingSettlements.length - 1];
+                    const outstanding = Number(lastSettlement.outstandingAmount !== undefined ? lastSettlement.outstandingAmount : lastSettlement.pendingAmount);
+                    if (outstanding <= 0) return;
+
+                    const totalPendingInRange = Number(lastSettlement.pendingAmount || 1);
+                    const ratio = outstanding / (totalPendingInRange || 1);
+                    const pendingAmt = Number(e.vendorRate || 0) * ratio;
+
+                    if (pendingAmt > 0) {
+                        pendingItems.push({ type: 'Restaurant', ref: e.orderId || e.id, entity: e.vendor, amount: pendingAmt, date: e.date, mode: e.paymentMode || 'Cash', status: 'Pending' });
+                    }
+                } else if (!e.isRestSettled) {
+                    pendingItems.push({ type: 'Restaurant', ref: e.orderId || e.id, entity: e.vendor, amount: Number(e.vendorRate || 0), date: e.date, mode: e.paymentMode || 'Cash', status: 'Pending' });
+                }
             });
 
             // Unsettled Rider Earnings
