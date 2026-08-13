@@ -69,9 +69,11 @@
         }
 
         @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white !important; }
+            .no-print, header, aside, button, nav, #globalSearchInput, #globalSearchResults { display: none !important; }
+            body { background: white !important; font-size: 10pt !important; color: #000000 !important; }
+            #appContainer, main, #tab-reports { display: block !important; overflow: visible !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .tab-content:not(#tab-reports) { display: none !important; }
+            #reportPrintArea { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; background: white !important; }
         }
 
         /* Modern Pill Selected Calendar & Date Picker Styling */
@@ -648,6 +650,18 @@
                 <div class="flex items-center space-x-3">
                     <h2 id="pageTitle" class="text-lg font-bold text-slate-800 tracking-tight">Dashboard</h2>
                 </div>
+
+                <!-- Global Search Bar Header Component -->
+                <div class="flex-1 max-w-md mx-4 relative hidden sm:block">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs text-amber-500"></i>
+                        </span>
+                        <input type="text" id="globalSearchInput" oninput="debounceGlobalSearch(this.value)" onfocus="debounceGlobalSearch(this.value)" placeholder="Global Search: Order ID, Rider, Restaurant, Customer..." class="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                    </div>
+                    <div id="globalSearchResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+
                 <div class="flex items-center space-x-4">
                     <!-- Notifications & Settings Quick Icons -->
                     <div class="flex items-center space-x-2 text-slate-500">
@@ -661,7 +675,7 @@
                         <div class="relative">
                             <button onclick="switchTab('auditLog')" class="w-9 h-9 flex items-center justify-center hover:bg-slate-100 rounded-xl transition text-slate-600 relative" title="Notifications / Audit">
                                 <i class="fa-regular fa-bell"></i>
-                                <span class="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full"></span>
+                                <span class="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full"></span>
                             </button>
                         </div>
                     </div>
@@ -676,7 +690,7 @@
                                 <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1 animate-pulse"></span> System Online
                             </div>
                         </div>
-                        <div class="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/20 border-2 border-white">
+                        <div class="w-9 h-9 bg-amber-500 text-zinc-950 font-bold rounded-full flex items-center justify-center text-sm shadow-md shadow-amber-500/20 border-2 border-white">
                             N
                         </div>
                     </div>
@@ -815,7 +829,7 @@
                             </div>
                         </div>
 
-                        <!-- Monthly Profit -->
+                        <!-- Weekly Profit -->
                         <div class="erp-card p-5 flex items-center justify-between">
                             <div class="space-y-1">
                                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Weekly Profit</p>
@@ -827,6 +841,36 @@
                             </div>
                         </div>
 
+                    </div>
+
+                    <!-- Today Payment Collections Summary Cards -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center"><i class="fa-solid fa-wallet text-amber-500 mr-2"></i>Today Payment Collections</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Today Cash -->
+                            <div class="erp-card p-5 flex items-center justify-between border-l-4 border-l-amber-500">
+                                <div class="space-y-1">
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today Cash</p>
+                                    <h3 id="dashTodayCash" class="text-2xl font-extrabold text-amber-600">₹0.00</h3>
+                                    <p class="text-[10px] text-slate-500 font-medium">Cash collected today</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shadow-sm border border-amber-100">
+                                    <i class="fa-solid fa-money-bill-wave"></i>
+                                </div>
+                            </div>
+
+                            <!-- Today UPI -->
+                            <div class="erp-card p-5 flex items-center justify-between border-l-4 border-l-blue-500">
+                                <div class="space-y-1">
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today UPI</p>
+                                    <h3 id="dashTodayUpi" class="text-2xl font-extrabold text-blue-600">₹0.00</h3>
+                                    <p class="text-[10px] text-slate-500 font-medium">UPI collected today</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shadow-sm border border-blue-100">
+                                    <i class="fa-solid fa-mobile-screen-button"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Additional KPI Sub-Cards -->
@@ -1353,7 +1397,7 @@
                                 <i class="fa-solid fa-rotate-left"></i><span>Reset Filters</span>
                             </button>
                             <div class="flex items-center space-x-2">
-                                <button onclick="window.print()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200 flex items-center space-x-1">
+                                <button onclick="printReport()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200 flex items-center space-x-1">
                                     <i class="fa-solid fa-print"></i><span>Print</span>
                                 </button>
                                 <button onclick="exportCSV()" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center space-x-1">
@@ -1401,10 +1445,14 @@
                 </div>
 
                 <!-- 9. AUDIT LOG -->
+                <!-- 9. AUDIT LOG (APPEND-ONLY) -->
                 <div id="tab-auditLog" class="tab-content hidden space-y-6">
                     <div class="erp-card p-4 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-800 text-base">System Audit Log</h3>
-                        <button onclick="promptClearAudit()" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold transition border border-rose-200">Clear Log</button>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">System Audit Log</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Append-only security log tracking system actions & data modifications</p>
+                        </div>
+                        <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">Append-Only Active</span>
                     </div>
                     <div class="erp-card overflow-hidden">
                         <div class="overflow-x-auto max-h-[600px]">
@@ -1413,7 +1461,11 @@
                                     <tr class="text-slate-500 font-bold uppercase">
                                         <th class="p-3.5">Date & Time</th>
                                         <th class="p-3.5">User</th>
+                                        <th class="p-3.5">Module</th>
                                         <th class="p-3.5">Action</th>
+                                        <th class="p-3.5">Record ID</th>
+                                        <th class="p-3.5">Old Value</th>
+                                        <th class="p-3.5">New Value</th>
                                         <th class="p-3.5">Details</th>
                                     </tr>
                                 </thead>
@@ -1863,6 +1915,10 @@
                     <input type="radio" name="pmMode" value="Cash + UPI" onchange="togglePmModalMode()" class="text-blue-600 focus:ring-blue-500">
                     <span>Cash + UPI</span>
                 </label>
+                <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl transition border border-slate-200">
+                    <input type="radio" name="pmMode" value="Online" onchange="togglePmModalMode()" class="text-blue-600 focus:ring-blue-500">
+                    <span>Online</span>
+                </label>
             </div>
 
             <div id="pmSplitSection" class="hidden space-y-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
@@ -2041,12 +2097,12 @@
             document.getElementById('loginError').classList.add('hidden');
         }
 
-        function logAudit(action, details) {
+        function logAudit(action, details, module = 'System', recordId = '-', oldValue = '-', newValue = '-') {
             const now = new Date();
             const day = String(now.getDate()).padStart(2, '0');
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const year = now.getFullYear();
-            const dateStr = `${day}-${month}-${year}`;
+            const dateStr = `${day}/${month}/${year}`;
 
             let hours = now.getHours();
             const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -2055,14 +2111,142 @@
             hours = hours ? hours : 12;
             const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
+            db.auditLog = db.auditLog || [];
             db.auditLog.unshift({
+                id: 'AUD-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
                 date: dateStr,
                 time: timeStr,
                 user: currentUser || 'Admin',
-                action,
-                details
+                module: module || 'System',
+                action: action || 'Action',
+                recordId: recordId || '-',
+                oldValue: oldValue || '-',
+                newValue: newValue || '-',
+                details: details || `${action}: ${recordId !== '-' ? recordId : ''}`
             });
             saveDB();
+        }
+
+        // Global Search Logic
+        let globalSearchTimeout = null;
+        function debounceGlobalSearch(query) {
+            if (globalSearchTimeout) clearTimeout(globalSearchTimeout);
+            globalSearchTimeout = setTimeout(() => {
+                handleGlobalSearch(query);
+            }, 200);
+        }
+
+        function handleGlobalSearch(query) {
+            const resultsContainer = document.getElementById('globalSearchResults');
+            if (!resultsContainer) return;
+            const q = String(query || '').trim().toLowerCase();
+            if (!q) {
+                resultsContainer.classList.add('hidden');
+                resultsContainer.innerHTML = '';
+                return;
+            }
+
+            const results = [];
+
+            // 1. Search Orders
+            (db.entries || []).forEach(e => {
+                const match = (
+                    (e.orderId && String(e.orderId).toLowerCase().includes(q)) ||
+                    (e.customerName && String(e.customerName).toLowerCase().includes(q)) ||
+                    (e.customerMobile && String(e.customerMobile).toLowerCase().includes(q)) ||
+                    (e.vendor && String(e.vendor).toLowerCase().includes(q)) ||
+                    (e.deliveryBoy && String(e.deliveryBoy).toLowerCase().includes(q)) ||
+                    (e.paymentMode && String(e.paymentMode).toLowerCase().includes(q)) ||
+                    (e.date && String(e.date).toLowerCase().includes(q))
+                );
+                if (match) {
+                    results.push({
+                        type: 'Order',
+                        icon: 'fa-cart-shopping',
+                        tab: 'dailyEntry',
+                        title: `Order #${e.orderId || e.id}`,
+                        subtitle: `${e.customerName || 'Customer'} • ${e.vendor || ''} • ₹${e.vendorRate || 0}`,
+                        keyword: e.orderId || e.id
+                    });
+                }
+            });
+
+            // 2. Search Restaurant Settlements
+            (db.restaurantSettlements || []).forEach(s => {
+                if (s.vendor && String(s.vendor).toLowerCase().includes(q)) {
+                    results.push({
+                        type: 'Accounts',
+                        icon: 'fa-cash-register',
+                        tab: 'restaurantSettlement',
+                        title: `Restaurant Settlement - ${s.vendor}`,
+                        subtitle: `Paid: ₹${s.paidAmount || 0} • Date: ${s.date || ''}`,
+                        keyword: s.vendor
+                    });
+                }
+            });
+
+            // 3. Search Rider Settlements
+            (db.riderSettlements || []).forEach(rs => {
+                if ((rs.rider && String(rs.rider).toLowerCase().includes(q)) || (rs.id && String(rs.id).toLowerCase().includes(q))) {
+                    results.push({
+                        type: 'Rider Settlement',
+                        icon: 'fa-wallet',
+                        tab: 'riderSettlement',
+                        title: `Rider Settlement #${rs.id || ''} - ${rs.rider}`,
+                        subtitle: `Net: ${rs.netPayable || '₹0'} • Date: ${rs.date || ''}`,
+                        keyword: rs.id || rs.rider
+                    });
+                }
+            });
+
+            // 4. Search Expenses
+            (db.expenses || []).forEach(ex => {
+                if ((ex.expenseId && String(ex.expenseId).toLowerCase().includes(q)) || (ex.category && String(ex.category).toLowerCase().includes(q)) || (ex.remarks && String(ex.remarks).toLowerCase().includes(q))) {
+                    results.push({
+                        type: 'Expense',
+                        icon: 'fa-file-invoice-dollar',
+                        tab: 'expenseMgmt',
+                        title: `Expense #${ex.expenseId || ''} (${ex.category})`,
+                        subtitle: `Amount: ₹${ex.amount || 0} • Date: ${ex.date || ''}`,
+                        keyword: ex.expenseId || ex.category
+                    });
+                }
+            });
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No matching records found for "${query}"</div>`;
+            } else {
+                resultsContainer.innerHTML = results.slice(0, 8).map(r => `
+                    <div onclick="selectGlobalSearchResult('${r.tab}', '${r.keyword}')" class="p-3 hover:bg-amber-50 cursor-pointer transition flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid ${r.icon} text-xs"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold text-slate-800 truncate">${r.title}</div>
+                            <div class="text-[11px] text-slate-500 truncate">${r.subtitle}</div>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex-shrink-0">${r.type}</span>
+                    </div>
+                `).join('');
+            }
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function selectGlobalSearchResult(tabId, keyword) {
+            const resultsContainer = document.getElementById('globalSearchResults');
+            if (resultsContainer) resultsContainer.classList.add('hidden');
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) searchInput.value = '';
+
+            switchTab(tabId);
+
+            if (tabId === 'dailyEntry') {
+                const advSearchText = document.getElementById('advSearchText');
+                if (advSearchText) {
+                    advSearchText.value = keyword;
+                    applyAdvancedSearch();
+                }
+            }
         }
 
         function format12Hour(timeStr) {
@@ -2487,6 +2671,8 @@
             let todaysOrders = 0;
             let todaysGrossProfit = 0;
             let todaysNaavTransferred = 0;
+            let todayCash = 0;
+            let todayUpi = 0;
             let weeklyProfit = 0;
             let monthlyProfit = 0;
 
@@ -2507,6 +2693,27 @@
                     todaysOrders++;
                     todaysGrossProfit += profit;
                     todaysNaavTransferred += Number(e.naavTransferred || 0);
+
+                    const mode = String(e.paymentMode || 'Cash').trim();
+                    const cashVal = Number(e.cash || 0);
+                    const upiVal = Number(e.upi || 0);
+                    const totalPayVal = (cashVal + upiVal > 0) ? (cashVal + upiVal) : (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+
+                    if (mode === 'Cash') {
+                        todayCash += (cashVal > 0 ? cashVal : totalPayVal);
+                    } else if (mode === 'UPI' || mode === 'Online') {
+                        todayUpi += (upiVal > 0 ? upiVal : totalPayVal);
+                    } else if (mode === 'Cash + UPI' || mode === 'Cash+UPI') {
+                        todayCash += cashVal;
+                        todayUpi += upiVal;
+                    } else {
+                        if (cashVal > 0 || upiVal > 0) {
+                            todayCash += cashVal;
+                            todayUpi += upiVal;
+                        } else {
+                            todayCash += totalPayVal;
+                        }
+                    }
                 }
 
                 if (eDate >= mondayStr && eDate <= today) {
@@ -2586,6 +2793,12 @@
             document.getElementById('dashGrossProfit').innerText = '₹' + todaysGrossProfit.toFixed(2);
             if (document.getElementById('dashNaavTransferred')) {
                 document.getElementById('dashNaavTransferred').innerText = '₹' + todaysNaavTransferred.toFixed(2);
+            }
+            if (document.getElementById('dashTodayCash')) {
+                document.getElementById('dashTodayCash').innerText = '₹' + todayCash.toFixed(2);
+            }
+            if (document.getElementById('dashTodayUpi')) {
+                document.getElementById('dashTodayUpi').innerText = '₹' + todayUpi.toFixed(2);
             }
             document.getElementById('dashTotalExpenses').innerText = '₹' + todayExpenses.toFixed(2);
             document.getElementById('dashNetProfit').innerText = '₹' + todaysNetProfit.toFixed(2);
@@ -3456,11 +3669,12 @@
 
             let finalCash = 0;
             let finalUpi = 0;
+            const oldMode = entry.paymentMode || 'Cash';
 
             if (mode === 'Cash') {
                 finalCash = totalAmt;
                 finalUpi = 0;
-            } else if (mode === 'UPI') {
+            } else if (mode === 'UPI' || mode === 'Online') {
                 finalCash = 0;
                 finalUpi = totalAmt;
             } else if (mode === 'Cash + UPI') {
@@ -3493,7 +3707,7 @@
                     time: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString()
                 });
 
-                logAudit('Payment Mode Updated', `Order ID: ${entry.orderId} | Mode: ${mode} | Cash: ₹${finalCash} | UPI: ₹${finalUpi}`);
+                logAudit('Payment Mode Updated', `Order ID: ${entry.orderId} | Mode: ${mode} | Cash: ₹${finalCash} | UPI: ₹${finalUpi}`, 'Orders', entry.orderId, oldMode, mode);
 
                 // Optimistic immediate UI update (0ms perceived delay)
                 window.closePaymentModeModal();
@@ -5460,9 +5674,11 @@
                             ${paymentMode ? ` | Mode: <span class="font-bold text-blue-600">${paymentMode}</span>` : ''}
                         </p>
                     </div>
-                    <div class="text-right">
-                        <span class="text-[10px] text-slate-400 block">Generated On</span>
-                        <span class="text-xs font-mono font-semibold text-slate-600">${new Date().toLocaleString()}</span>
+                    <div class="flex gap-2">
+                        <button onclick="printReport()" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg"><i class="fa-solid fa-print"></i></button>
+                        <button onclick="exportCSV()" class="px-3 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold rounded-lg">CSV</button>
+                        <button onclick="exportXLSX()" class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-bold rounded-lg">Excel</button>
+                        <button onclick="exportPDF()" class="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold rounded-lg">PDF</button>
                     </div>
                 </div>
 
@@ -5471,6 +5687,101 @@
                 ${tableHTML}
             `;
         }
+
+        // Dedicated Report Print & Export Handlers (Reusing currentReportExportData)
+        window.printReport = function() {
+            const printArea = document.getElementById('reportPrintArea');
+            if (!printArea) {
+                alert('No report content available to print.');
+                return;
+            }
+            window.print();
+        };
+
+        window.exportCSV = function() {
+            if (!currentReportExportData || !currentReportExportData.headers || currentReportExportData.headers.length === 0) {
+                alert('Please generate a report before exporting CSV.');
+                return;
+            }
+
+            const data = currentReportExportData;
+            const rows = [data.headers, ...(data.rows || [])];
+            if (data.grandTotalRow && data.grandTotalRow.length > 0) {
+                rows.push(data.grandTotalRow);
+            }
+
+            const csvContent = rows.map(row => 
+                row.map(val => {
+                    const str = String(val === null || val === undefined ? '' : val);
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }
+                    return str;
+                }).join(',')
+            ).join('\r\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const dateStr = new Date().toISOString().split('T')[0];
+            const titleStr = (data.title || 'Report').replace(/\s+/g, '_');
+            const fileName = `NAAV_${titleStr}_${dateStr}.csv`;
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', fileName);
+            link.click();
+        };
+
+        window.exportXLSX = function() {
+            if (!currentReportExportData || !currentReportExportData.headers || currentReportExportData.headers.length === 0) {
+                alert('Please generate a report before exporting Excel.');
+                return;
+            }
+            if (typeof XLSX === 'undefined') {
+                alert('Excel export library is loading. Please try again in a moment.');
+                return;
+            }
+
+            const data = currentReportExportData;
+            const rows = [data.headers, ...(data.rows || [])];
+            if (data.grandTotalRow && data.grandTotalRow.length > 0) {
+                rows.push(data.grandTotalRow);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            const titleStr = (data.title || 'Report').replace(/\s+/g, '_');
+            const fileName = `NAAV_${titleStr}_${dateStr}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        };
+
+        window.exportPDF = function() {
+            const element = document.getElementById('reportPrintArea');
+            if (!element) {
+                alert('No report content available for PDF export.');
+                return;
+            }
+            if (typeof html2pdf === 'undefined') {
+                alert('PDF export library is loading. Please try again in a moment.');
+                return;
+            }
+
+            const data = currentReportExportData;
+            const dateStr = new Date().toISOString().split('T')[0];
+            const titleStr = (data && data.title ? data.title : 'Report').replace(/\s+/g, '_');
+            const fileName = `NAAV_${titleStr}_${dateStr}.pdf`;
+
+            const opt = {
+                margin: 0.4,
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        };
 
         function loadRecycleBin() {
             const tbody = document.getElementById('recycleTableBody');
@@ -5502,7 +5813,7 @@
                 });
                 db.entries = db.entries.concat(db.recycleBin);
                 db.recycleBin = [];
-                logAudit('Restore', 'All recycle bin items restored');
+                logAudit('Restore', 'All recycle bin items restored', 'Recycle Bin', '-', '-', '-');
                 saveDB();
                 loadRecycleBin();
             });
@@ -5518,9 +5829,29 @@
 
         function loadAuditLog() {
             const tbody = document.getElementById('auditTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
+
+            if (!db.auditLog || db.auditLog.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">No audit records logged</td></tr>`;
+                return;
+            }
+
             db.auditLog.forEach(l => {
-                tbody.innerHTML += `<tr><td class="p-3.5">${l.date} ${l.time}</td><td class="p-3.5 font-semibold text-slate-700">${l.user}</td><td class="p-3.5 font-bold text-blue-600">${l.action}</td><td class="p-3.5">${l.details}</td></tr>`;
+                const moduleTag = l.module ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">${l.module}</span>` : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">System</span>`;
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3.5 font-mono text-slate-500">${l.date || ''} ${l.time || ''}</td>
+                        <td class="p-3.5 font-semibold text-slate-800">${l.user || 'Admin'}</td>
+                        <td class="p-3.5">${moduleTag}</td>
+                        <td class="p-3.5 font-bold text-amber-600">${l.action || '-'}</td>
+                        <td class="p-3.5 font-mono font-bold text-blue-600">${l.recordId || '-'}</td>
+                        <td class="p-3.5 text-rose-600 font-medium">${l.oldValue || '-'}</td>
+                        <td class="p-3.5 text-emerald-600 font-medium">${l.newValue || '-'}</td>
+                        <td class="p-3.5 text-slate-600 max-w-xs truncate" title="${l.details || ''}">${l.details || '-'}</td>
+                    </tr>
+                `;
             });
         }
 
@@ -5533,56 +5864,39 @@
             if (listContainer) {
                 let custom = db.settings.customCategories || [];
                 if (custom.length === 0) {
-                    listContainer.innerHTML = '<span class="text-xs text-slate-400">No custom categories added yet.</span>';
+                    listContainer.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">No custom categories added</div>`;
                 } else {
-                    listContainer.innerHTML = custom.map(c => `
-                        <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                            ${c}
-                            <button type="button" onclick="removeCustomExpenseCategory('${c}')" class="ml-2 text-blue-400 hover:text-rose-600"><i class="fa-solid fa-xmark"></i></button>
-                        </span>
+                    listContainer.innerHTML = custom.map((cat, idx) => `
+                        <div class="flex items-center justify-between p-3 bg-surface rounded-xl border border-slate-200">
+                            <span class="text-xs font-bold text-slate-700">${cat}</span>
+                            <button onclick="deleteCustomCategory(${idx})" class="text-rose-600 hover:text-rose-800 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </div>
                     `).join('');
                 }
             }
-
-            const dbString = JSON.stringify(db);
-            const dbSizeKB = (new Blob([dbString]).size / 1024).toFixed(2);
-            let storageKB = '0.00';
-storageKB = '0.00';
-
-            document.getElementById('sysHealthSize').innerText = dbSizeKB + ' KB';
             document.getElementById('sysHealthOrders').innerText = db.entries.length;
-            document.getElementById('sysHealthRestaurants').innerText = db.restaurants.length;
-            document.getElementById('sysHealthRiders').innerText = db.deliveryBoys.length;
             document.getElementById('sysHealthExpenses').innerText = db.expenses.length;
             document.getElementById('sysHealthSettlements').innerText = db.riderSettlements.length + db.restaurantSettlements.length;
-            document.getElementById('sysHealthAdmins').innerText = db.administrators.length;
-            document.getElementById('sysHealthBackup').innerText = db.settings.lastBackupDate || 'Never';
-            document.getElementById('sysHealthStorage').innerText = storageKB + ' KB';
+            document.getElementById('sysHealthAudit').innerText = db.auditLog.length;
+            document.getElementById('sysHealthBackupDate').innerText = db.settings.lastBackupDate || 'Never';
         }
 
-        function promptSaveSettings() {
-            requestSecurityCheck(() => {
-                db.settings.companyName = document.getElementById('settingCompanyName').value;
-                logAudit('Settings Changes', `Company Name: ${db.settings.companyName}`);
-                saveDB();
-                initApp();
-                alert('Settings saved');
-            });
-        }
+        function downloadBackupJSON() {
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+            const fileName = `naav_accounts_backup_${dateStr}_${timeStr}.json`;
 
+            db.settings = db.settings || {};
+            db.settings.lastBackupDate = now.toLocaleString();
 
-
-        function backupJSON() {
-            const nowStr = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
-            db.settings.lastBackupDate = nowStr;
-            saveDB();
-
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const snapshot = normalizeDbState(db);
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(snapshot, null, 2));
             const a = document.createElement('a');
             a.setAttribute('href', dataStr);
-            a.setAttribute('download', 'naav_accounts_backup.json');
+            a.setAttribute('download', fileName);
             a.click();
-            logAudit('Backup', 'Database JSON downloaded');
+            logAudit('Download Backup', `Backup file ${fileName} downloaded`, 'Settings', '-', '-', '-');
             loadSettings();
         }
 
@@ -5593,12 +5907,32 @@ storageKB = '0.00';
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     try {
-                        db = JSON.parse(evt.target.result);
-                        saveDB();
-                        logAudit('Restore', 'Database restored from JSON backup');
-                        alert('Data restored successfully');
-                        initApp();
-                    } catch (err) { alert('Invalid JSON file'); }
+                        const parsed = JSON.parse(evt.target.result);
+                        if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.entries) || !Array.isArray(parsed.vendors)) {
+                            alert('Restore Failed: The selected file is not a valid NAAV Accounts ERP backup JSON.');
+                            e.target.value = '';
+                            return;
+                        }
+
+                        const ordersCount = (parsed.entries || []).length;
+                        const expensesCount = (parsed.expenses || []).length;
+                        const vendorsCount = (parsed.vendors || []).length;
+                        const auditCount = (parsed.auditLog || []).length;
+
+                        const confirmMsg = `Confirm Database Restore?\n\nBackup contents summary:\n- ${ordersCount} Orders\n- ${expensesCount} Expenses\n- ${vendorsCount} Restaurants\n- ${auditCount} Audit Logs\n\nRestoring will replace the current active state with the backup. Do you want to proceed?`;
+                        
+                        if (confirm(confirmMsg)) {
+                            db = normalizeDbState(parsed);
+                            logAudit('Restore Backup', `Database restored from backup JSON (${ordersCount} Orders)`, 'Settings', '-', '-', '-');
+                            saveDB();
+                            alert('Data restored successfully!');
+                            initApp();
+                        }
+                    } catch (err) {
+                        alert('Error: Failed to parse backup file. Please ensure it is a valid JSON document.');
+                    } finally {
+                        e.target.value = '';
+                    }
                 };
                 reader.readAsText(file);
             });
