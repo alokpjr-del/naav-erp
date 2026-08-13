@@ -2192,6 +2192,26 @@
         let pendingDeleteRestSettlementId = null;
         let chartsInstance = {};
         let lastCreatedEntry = null;
+        let currentOrderReceiptEntry = null;
+        let lastRiderSettlement = null;
+        let currentRiderReceiptSettlement = null;
+        let lastRestSettlement = null;
+        let currentRestReceiptSettlement = null;
+
+        // Universal Safe WhatsApp Helper
+        function openWhatsAppMessage(message, phone = '') {
+            if (!message) return;
+            const encoded = encodeURIComponent(message);
+            const cleanPhone = phone ? String(phone).replace(/[^0-9]/g, '') : '';
+            const url = cleanPhone 
+                ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
+                : `https://api.whatsapp.com/send?text=${encoded}`;
+            
+            const popup = window.open(url, '_blank', 'noopener,noreferrer');
+            if (!popup) {
+                window.location.href = url;
+            }
+        }
 
         function getStoredAuthSession() {
             try {
@@ -3349,6 +3369,8 @@
         }
 
         function showRestSettlementReceiptModal(s) {
+            lastRestSettlement = s;
+            currentRestReceiptSettlement = s;
             const content = document.getElementById('restReceiptContent');
             content.innerHTML = `
                 <div class="text-center space-y-2 border-b border-slate-200 pb-4">
@@ -3374,37 +3396,45 @@
             document.getElementById('restReceiptModal').classList.add('hidden');
         }
 
-        function shareWhatsAppRestSettlement(s) {
-            const restaurant = db.restaurants.find(r => r.name === s.vendor) || null;
-            const mobile = restaurant && restaurant.mobile ? String(restaurant.mobile).replace(/[^0-9]/g, '') : '';
-            if (!mobile) {
-                alert('Restaurant mobile number is missing. Please add a mobile number before sharing via WhatsApp.');
-                return;
-            }
+        function shareWhatsAppRestSettlement(sParam) {
+            const s = sParam || currentRestReceiptSettlement || lastRestSettlement;
+            if (!s) return alert('Restaurant settlement record not found');
 
-            const message = [
-                `Restaurant Settlement Receipt`,
+            const restaurant = (db.restaurants || []).find(r => r.name === s.vendor) || null;
+            const mobile = restaurant && restaurant.mobile ? String(restaurant.mobile).replace(/[^0-9]/g, '') : '';
+            const company = db.settings.companyName || 'NAAV ACCOUNTS';
+
+            const msg = [
+                `*${company} - RESTAURANT SETTLEMENT*`,
                 ``,
-                `Restaurant Name: ${s.vendor}`,
-                `Period: ${s.from} to ${s.to}`,
-                `Total Orders: ${s.orders}`,
-                `Pending Amount: ${s.pendingAmount}`,
-                `Paid Amount: ₹${Number(s.paidAmount).toFixed(2)}`,
-                `Outstanding Amount: ${s.outstandingAmount}`,
-                `Payment Mode: ${s.mode}`,
-                `Payment Status: ${s.status}`,
-                `Remarks: ${s.remarks || '-'}`
+                `Restaurant: ${s.vendor || s.restaurantName || '-'}`,
+                `Settlement Date: ${s.date || s.settlementDate || '-'}`,
+                `Period: ${s.from || '-'} to ${s.to || '-'}`,
+                `Orders: ${s.orders || 0}`,
+                ``,
+                `Food Sales / Pending: ₹${Number(s.pendingAmount || s.foodSales || 0).toFixed(2)}`,
+                `Paid Amount: ₹${Number(s.paidAmount || 0).toFixed(2)}`,
+                `Outstanding: ₹${Number(s.outstandingAmount || s.outstanding || 0).toFixed(2)}`,
+                ``,
+                `Payment Mode: ${s.mode || s.paymentMode || 'Cash'}`,
+                `Status: ${s.status || 'Paid'}`,
+                `Remarks: ${s.remarks || '-'}`,
+                ``,
+                `Thank You`,
+                `${company}`
             ].join('\n');
 
-            const encodedMessage = encodeURIComponent(message);
-            const waUrl = `https://wa.me/${mobile}?text=${encodedMessage}`;
-            const popup = window.open(waUrl, '_blank', 'noopener,noreferrer');
-            if (!popup) window.location.href = waUrl;
+            openWhatsAppMessage(msg, mobile);
+        }
+
+        function shareWhatsAppRestReceipt() {
+            shareWhatsAppRestSettlement(currentRestReceiptSettlement || lastRestSettlement);
         }
 
         function shareWhatsAppRestSettlementById(id) {
-            const s = db.restaurantSettlements.find(x => x.id === id);
+            const s = (db.restaurantSettlements || []).find(x => x.id === id);
             if (s) shareWhatsAppRestSettlement(s);
+            else alert('Restaurant settlement not found');
         }
 
         function printRestReceiptById(id) {
@@ -4207,6 +4237,7 @@
 
         function showOrderReceiptModal(entry) {
             lastCreatedEntry = entry;
+            currentOrderReceiptEntry = entry;
             document.getElementById('orderReceiptCompanyName').innerText = db.settings.companyName || 'NAAV ACCOUNTS';
             const container = document.getElementById('orderReceiptDetails');
             container.innerHTML = `
@@ -4231,6 +4262,40 @@
 
         function closeOrderReceiptModal() {
             document.getElementById('orderReceiptModal').classList.add('hidden');
+        }
+
+        function shareWhatsAppOrderReceipt(entryParam) {
+            const e = entryParam || currentOrderReceiptEntry || lastCreatedEntry;
+            if (!e) return alert('Order record not found');
+
+            const company = db.settings.companyName || 'NAAV ACCOUNTS';
+            const msg = [
+                `*${company} - ORDER RECEIPT*`,
+                ``,
+                `Order ID: ${e.orderId || e.id || '-'}`,
+                `Date: ${e.date || '-'}`,
+                `Customer: ${e.customerName || '-'}`,
+                `Mobile: ${e.customerMobile || '-'}`,
+                ``,
+                `Restaurant: ${e.vendor || '-'}`,
+                `Location: ${e.location || '-'}`,
+                `Category: ${e.category || '-'}`,
+                ``,
+                `Vendor Rate: ₹${Number(e.vendorRate || 0).toFixed(2)}`,
+                `Online Rate: ₹${Number(e.onlineRate || 0).toFixed(2)}`,
+                `Delivery Charge: ₹${Number(e.deliveryCharge || 0).toFixed(2)}`,
+                `Profit: ₹${Number(e.profit || 0).toFixed(2)}`,
+                ``,
+                `Delivery Boy: ${e.deliveryBoy || '-'}`,
+                `Payment: Cash ₹${Number(e.cash || 0).toFixed(2)} / UPI ₹${Number(e.upi || 0).toFixed(2)}`,
+                ``,
+                `Remarks: ${e.remarks || '-'}`,
+                ``,
+                `Thank You`,
+                `${company}`
+            ].join('\n');
+
+            openWhatsAppMessage(msg);
         }
 
         function showOrderTimeline(id) {
@@ -5139,21 +5204,51 @@
             closeDeleteSettlementModal();
         }
 
-        function shareWhatsAppSettlement(s) {
-            const msg = `*NAAV DELIVERY*%0ARider : ${s.rider}%0APeriod%0A${s.from} to ${s.to}%0AOrders : ${s.orders}%0ADelivery Earnings : ${s.earnings}%0ABonus : ₹${s.bonus}%0AFine : ₹${s.fine}%0AAdvance : ₹${s.advance}%0ANet Payment : ${s.netPayable}%0A%0AThank You%0ANAAV Delivery`;
-            const url = `https://api.whatsapp.com/send?text=${msg}`;
-            const popup = window.open(url, '_blank', 'noopener,noreferrer');
-            if (!popup) window.location.href = url;
+        function shareWhatsAppSettlement(sParam) {
+            const s = sParam || currentRiderReceiptSettlement || lastRiderSettlement;
+            if (!s) return alert('Rider settlement record not found');
+
+            const company = db.settings.companyName || 'NAAV ACCOUNTS';
+            const msg = [
+                `*${company} - RIDER SETTLEMENT*`,
+                ``,
+                `Rider: ${s.rider || s.riderName || '-'}`,
+                `Settlement Date: ${s.date || s.settlementDate || '-'}`,
+                `Period: ${s.from || '-'} to ${s.to || '-'}`,
+                `Orders: ${s.orders || 0}`,
+                ``,
+                `Delivery Earnings: ₹${Number(s.earnings || s.deliveryEarnings || 0).toFixed(2)}`,
+                `Bonus: ₹${Number(s.bonus || 0).toFixed(2)}`,
+                `Fine: ₹${Number(s.fine || 0).toFixed(2)}`,
+                `Advance: ₹${Number(s.advance || 0).toFixed(2)}`,
+                `Net Payment: ₹${Number(s.netPayable || s.netPayment || 0).toFixed(2)}`,
+                ``,
+                `Payment Mode: ${s.mode || s.paymentMode || 'Cash'}`,
+                `Status: ${s.status || 'Paid'}`,
+                `Remarks: ${s.remarks || '-'}`,
+                ``,
+                `Thank You`,
+                `${company}`
+            ].join('\n');
+
+            openWhatsAppMessage(msg);
+        }
+
+        function shareWhatsAppReceipt() {
+            shareWhatsAppSettlement(currentRiderReceiptSettlement || lastRiderSettlement);
         }
 
         function shareWhatsAppSettlementById(id) {
-            const s = db.riderSettlements.find(x => x.id === id);
+            const s = (db.riderSettlements || []).find(x => x.id === id);
             if (s) shareWhatsAppSettlement(s);
+            else alert('Rider settlement not found');
         }
 
         function printRiderReceipt(id) {
-            const s = db.riderSettlements.find(x => x.id === id);
+            const s = (db.riderSettlements || []).find(x => x.id === id);
             if (!s) return;
+            lastRiderSettlement = s;
+            currentRiderReceiptSettlement = s;
             const content = document.getElementById('receiptContent');
             content.innerHTML = `
                 <div class="text-center space-y-2 border-b border-slate-200 pb-4">
