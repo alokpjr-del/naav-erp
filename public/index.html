@@ -662,7 +662,15 @@
                     <div id="globalSearchResults" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
                 </div>
 
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-3">
+                    <!-- Quick Date Switcher Component -->
+                    <div class="hidden lg:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-600">
+                        <button onclick="applyQuickDateSwitcher('today')" class="px-2 py-0.5 rounded-lg hover:bg-white transition" title="Today">Today</button>
+                        <button onclick="applyQuickDateSwitcher('yesterday')" class="px-2 py-0.5 rounded-lg hover:bg-white transition" title="Yesterday">Yest.</button>
+                        <button onclick="applyQuickDateSwitcher('week')" class="px-2 py-0.5 rounded-lg hover:bg-white transition" title="This Week">Week</button>
+                        <button onclick="applyQuickDateSwitcher('month')" class="px-2 py-0.5 rounded-lg hover:bg-white transition" title="This Month">Month</button>
+                    </div>
+
                     <!-- Notifications & Settings Quick Icons -->
                     <div class="flex items-center space-x-2 text-slate-500">
                         <div class="hidden md:flex items-center space-x-1 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-medium text-slate-600 border border-slate-200">
@@ -672,11 +680,20 @@
                         <button onclick="switchTab('settings')" class="w-9 h-9 flex items-center justify-center hover:bg-slate-100 rounded-xl transition text-slate-600" title="Settings">
                             <i class="fa-solid fa-gear"></i>
                         </button>
+                        
+                        <!-- Global Notification Center Dropdown -->
                         <div class="relative">
-                            <button onclick="switchTab('auditLog')" class="w-9 h-9 flex items-center justify-center hover:bg-slate-100 rounded-xl transition text-slate-600 relative" title="Notifications / Audit">
+                            <button id="headerNotificationBtn" onclick="toggleNotificationMenu()" class="w-9 h-9 flex items-center justify-center hover:bg-slate-100 rounded-xl transition text-slate-600 relative" title="Global Notifications">
                                 <i class="fa-regular fa-bell"></i>
-                                <span class="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full"></span>
+                                <span id="notificationBadge" class="hidden absolute top-1 right-1 px-1.5 py-0.5 text-[9px] font-extrabold bg-amber-500 text-slate-950 rounded-full leading-none">0</span>
                             </button>
+                            <div id="headerNotificationMenu" class="hidden absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-100">
+                                <div class="p-3 bg-slate-50 flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-800 flex items-center"><i class="fa-solid fa-bell text-amber-500 mr-1.5"></i>Actionable Notifications</span>
+                                    <button onclick="markAllNotificationsRead()" class="text-[10px] font-bold text-blue-600 hover:underline">Mark All Read</button>
+                                </div>
+                                <div id="notificationList" class="max-h-64 overflow-y-auto divide-y divide-slate-100 text-xs"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -724,7 +741,7 @@
                             <button onclick="switchTab('reports')" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 border border-slate-200">
                                 <i class="fa-solid fa-file-lines text-[10px]"></i><span>Reports</span>
                             </button>
-                            <button onclick="backupJSON()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 border border-slate-200">
+                            <button onclick="downloadBackupJSON()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 border border-slate-200">
                                 <i class="fa-solid fa-cloud-arrow-down text-[10px]"></i><span>Backup</span>
                             </button>
                         </div>
@@ -893,15 +910,54 @@
                         </div>
                     </div>
 
-                    <!-- Modern Charts Grid -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="erp-card p-6">
-                            <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-chart-bar text-blue-600 mr-2"></i> Orders by Rider</h3>
-                            <canvas id="chartOrdersByRider" height="120"></canvas>
+                    <!-- Professional Dashboard Charts Section -->
+                    <div class="space-y-4">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center">
+                            <i class="fa-solid fa-chart-pie text-amber-500 mr-2"></i>Performance & Business Analytics
+                        </h4>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Sales Trend (Last 7 Days) -->
+                            <div class="erp-card p-5">
+                                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center">
+                                    <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Sales Trend (Last 7 Days)
+                                </h3>
+                                <canvas id="chartSalesTrend" height="130"></canvas>
+                            </div>
+
+                            <!-- Profit Trend (Last 7 Days) -->
+                            <div class="erp-card p-5">
+                                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center">
+                                    <i class="fa-solid fa-arrow-trend-up text-emerald-600 mr-2"></i>Profit Trend (Last 7 Days)
+                                </h3>
+                                <canvas id="chartProfitTrend" height="130"></canvas>
+                            </div>
                         </div>
-                        <div class="erp-card p-6">
-                            <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-chart-line text-emerald-600 mr-2"></i> Earnings by Rider</h3>
-                            <canvas id="chartEarningsByRider" height="120"></canvas>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Payment Collection (Cash vs UPI) -->
+                            <div class="erp-card p-5">
+                                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center">
+                                    <i class="fa-solid fa-pie-chart text-amber-600 mr-2"></i>Payment Collection
+                                </h3>
+                                <canvas id="chartPaymentCollection" height="160"></canvas>
+                            </div>
+
+                            <!-- Top 5 Restaurants by Sales -->
+                            <div class="erp-card p-5">
+                                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center">
+                                    <i class="fa-solid fa-store text-purple-600 mr-2"></i>Top 5 Restaurants
+                                </h3>
+                                <canvas id="chartTopRestaurants" height="160"></canvas>
+                            </div>
+
+                            <!-- Top 5 Riders by Earnings -->
+                            <div class="erp-card p-5">
+                                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center">
+                                    <i class="fa-solid fa-motorcycle text-indigo-600 mr-2"></i>Rider Performance
+                                </h3>
+                                <canvas id="chartRiderPerformance" height="160"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -924,7 +980,7 @@
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Filter Date</label>
-                                <input type="date" id="advSearchDate" onchange="applyAdvancedSearch()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                <input type="text" id="advSearchDate" onchange="applyAdvancedSearch()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Restaurant</label>
@@ -1055,11 +1111,12 @@
                                 <table class="w-full text-left border-collapse text-xs whitespace-nowrap erp-table">
                                     <thead>
                                         <tr class="text-slate-500 font-bold uppercase">
-                                            <th class="p-3.5">Date</th>
+                                            <th class="p-3.5">Settlement Date</th>
                                             <th class="p-3.5">Restaurant</th>
-                                            <th class="p-3.5">Orders</th>
-                                            <th class="p-3.5">Paid Amount</th>
-                                            <th class="p-3.5">Outstanding</th>
+                                            <th class="p-3.5 text-center">Orders</th>
+                                            <th class="p-3.5 text-right">Food Sales</th>
+                                            <th class="p-3.5 text-right">Paid Amount</th>
+                                            <th class="p-3.5 text-right">Outstanding</th>
                                             <th class="p-3.5">Mode</th>
                                             <th class="p-3.5">Status</th>
                                             <th class="p-3.5 text-right">Actions</th>
@@ -1294,6 +1351,22 @@
                             </form>
                         </div>
                         <div class="lg:col-span-2 erp-card p-6 space-y-4">
+                            <!-- Rider Pending Summary Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                <div>
+                                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Earned</span>
+                                    <span id="dashRiderTotalEarned" class="text-sm font-extrabold text-slate-800">₹0.00</span>
+                                </div>
+                                <div>
+                                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Already Paid</span>
+                                    <span id="dashRiderAlreadyPaid" class="text-sm font-extrabold text-emerald-600">₹0.00</span>
+                                </div>
+                                <div>
+                                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Payable</span>
+                                    <span id="dashRiderPendingPayable" class="text-sm font-extrabold text-amber-600">₹0.00</span>
+                                </div>
+                            </div>
+
                             <div class="flex items-center justify-between">
                                 <h3 class="font-bold text-slate-800 text-base">Settlement History</h3>
                                 <select id="riderSettleScope" onchange="loadSettlements()" class="p-2 bg-surface border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
@@ -1308,10 +1381,15 @@
                                         <tr class="text-slate-500 font-bold uppercase">
                                             <th class="p-3.5">Date</th>
                                             <th class="p-3.5">Rider</th>
-                                            <th class="p-3.5">Orders</th>
-                                            <th class="p-3.5">Net Payable</th>
+                                            <th class="p-3.5 text-center">Orders</th>
+                                            <th class="p-3.5 text-right">Delivery Earnings</th>
+                                            <th class="p-3.5 text-right">Bonus</th>
+                                            <th class="p-3.5 text-right">Fine</th>
+                                            <th class="p-3.5 text-right">Advance</th>
+                                            <th class="p-3.5 text-right">Net Payable</th>
                                             <th class="p-3.5">Mode</th>
                                             <th class="p-3.5">Status</th>
+                                            <th class="p-3.5">Remarks</th>
                                             <th class="p-3.5 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -1554,7 +1632,7 @@
                             <div class="space-y-4">
                                 <h4 class="text-sm font-bold text-slate-800">Backup & Restore</h4>
                                 <div class="flex space-x-3">
-                                    <button onclick="backupJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition">Backup JSON</button>
+                                    <button onclick="downloadBackupJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition">Backup JSON</button>
                                     <label class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer border border-slate-200">
                                         Restore JSON
                                         <input type="file" id="restoreFile" accept=".json" onchange="promptRestoreJSON(event)" class="hidden">
@@ -1645,6 +1723,66 @@
                                 <tbody id="dayCloseHistoryBody" class="divide-y divide-slate-100"></tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- CASH & UPI RECONCILIATION -->
+                <div id="tab-reconciliation" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-scale-balanced text-amber-500 mr-2"></i>Cash & UPI Reconciliation
+                        </h3>
+                        <div id="reconciliationContent" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- PENDING PAYMENTS -->
+                <div id="tab-pendingPayments" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-clock text-rose-500 mr-2"></i>Pending Payments Directory
+                        </h3>
+                        <div id="pendingPaymentsContent" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- MONTHLY P&L -->
+                <div id="tab-monthlyPNL" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Monthly Profit & Loss Statement
+                        </h3>
+                        <div id="monthlyPNLContent" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- RESTAURANT PERFORMANCE -->
+                <div id="tab-restaurantPerformance" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-store text-purple-600 mr-2"></i>Restaurant Performance Analytics
+                        </h3>
+                        <div id="restaurantPerformanceContent" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- RIDER PERFORMANCE -->
+                <div id="tab-riderPerformance" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-person-biking text-indigo-600 mr-2"></i>Rider Performance Analytics
+                        </h3>
+                        <div id="riderPerformanceContent" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- CUSTOMER ANALYTICS -->
+                <div id="tab-customerAnalytics" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-users text-emerald-600 mr-2"></i>Customer Analytics & Insights
+                        </h3>
+                        <div id="customerAnalyticsContent" class="space-y-4"></div>
                     </div>
                 </div>
 
@@ -2402,15 +2540,17 @@
 
         function buildSidebar() {
             const nav = document.getElementById('sidebarNav');
-            let role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
+            let role = currentAdminRecord ? (currentAdminRecord.role || 'Super Admin') : 'Super Admin';
 
             let items = [];
 
-            if (role === 'Super Administrator' || role === 'Administrator') {
+            if (role === 'Super Administrator' || role === 'Administrator' || role === 'Super Admin') {
                 items = [
                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
                     { type: 'divider' },
                     { id: 'dailyEntry', label: 'Orders', icon: 'fa-cart-shopping' },
+                    { id: 'reconciliation', label: 'Cash/UPI Reconcile', icon: 'fa-scale-balanced' },
+                    { id: 'pendingPayments', label: 'Pending Payments', icon: 'fa-clock' },
                     { id: 'restaurantSettlement', label: 'Accounts', icon: 'fa-cash-register' },
                     { id: 'vendors', label: 'Restaurants', icon: 'fa-store' },
                     { id: 'riderEarnings', label: 'Riders Earnings', icon: 'fa-motorcycle' },
@@ -2420,6 +2560,11 @@
                     { id: 'dayClose', label: 'Day Close', icon: 'fa-calendar-check' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' },
+                    { id: 'monthlyPNL', label: 'Monthly P&L', icon: 'fa-chart-line' },
+                    { id: 'restaurantPerformance', label: 'Rest. Performance', icon: 'fa-store' },
+                    { id: 'riderPerformance', label: 'Rider Performance', icon: 'fa-person-biking' },
+                    { id: 'customerAnalytics', label: 'Customer Analytics', icon: 'fa-users' },
+                    { type: 'divider' },
                     { id: 'recycleBin', label: 'Recycle Bin', icon: 'fa-trash-can' },
                     { id: 'auditLog', label: 'Audit Log', icon: 'fa-clipboard-list' },
                     { id: 'adminMgmt', label: 'Administrators', icon: 'fa-user-shield' },
@@ -2430,22 +2575,34 @@
                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
                     { type: 'divider' },
                     { id: 'dailyEntry', label: 'Orders', icon: 'fa-cart-shopping' },
+                    { id: 'vendors', label: 'Restaurants', icon: 'fa-store' },
+                    { id: 'deliveryBoys', label: 'Delivery Boys', icon: 'fa-user-tie' },
+                    { id: 'restaurantSettlement', label: 'Accounts', icon: 'fa-cash-register' },
+                    { id: 'riderSettlement', label: 'Riders Settlement', icon: 'fa-wallet' },
+                    { type: 'divider' },
+                    { id: 'reports', label: 'Reports', icon: 'fa-file-lines' }
+                ];
+            } else if (role === 'Accounts') {
+                items = [
+                    { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
+                    { type: 'divider' },
+                    { id: 'dailyEntry', label: 'Orders', icon: 'fa-cart-shopping' },
+                    { id: 'reconciliation', label: 'Cash/UPI Reconcile', icon: 'fa-scale-balanced' },
+                    { id: 'pendingPayments', label: 'Pending Payments', icon: 'fa-clock' },
                     { id: 'restaurantSettlement', label: 'Accounts', icon: 'fa-cash-register' },
                     { id: 'riderSettlement', label: 'Riders Settlement', icon: 'fa-wallet' },
                     { id: 'expenseMgmt', label: 'Expenses', icon: 'fa-file-invoice-dollar' },
                     { type: 'divider' },
-                    { id: 'reports', label: 'Reports', icon: 'fa-file-lines' }
+                    { id: 'reports', label: 'Reports', icon: 'fa-file-lines' },
+                    { id: 'monthlyPNL', label: 'Monthly P&L', icon: 'fa-chart-line' }
                 ];
-            } else if (role === 'Operator') {
-                items = [
-                    { id: 'dailyEntry', label: 'Orders', icon: 'fa-cart-shopping' },
-                    { id: 'expenseMgmt', label: 'Expenses', icon: 'fa-file-invoice-dollar' },
-                    { type: 'divider' },
-                    { id: 'reports', label: 'Reports', icon: 'fa-file-lines' }
-                ];
-            } else if (role === 'Viewer') {
+            } else {
                 items = [
                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
+                    { type: 'divider' },
+                    { id: 'dailyEntry', label: 'Orders View', icon: 'fa-cart-shopping' },
+                    { id: 'vendors', label: 'Restaurants View', icon: 'fa-store' },
+                    { id: 'deliveryBoys', label: 'Riders View', icon: 'fa-user-tie' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' }
                 ];
@@ -2515,6 +2672,8 @@
             const titles = {
                 dashboard: 'Business Dashboard',
                 dailyEntry: 'Orders Management',
+                reconciliation: 'Cash & UPI Reconciliation',
+                pendingPayments: 'Pending Payments Directory',
                 restaurantSettlement: 'Accounts & Settlement',
                 expenseMgmt: 'Expense Management',
                 vendors: 'Restaurant Directory',
@@ -2522,6 +2681,10 @@
                 riderSettlement: 'Rider Settlement',
                 deliveryBoys: 'Delivery Boy Directory',
                 reports: 'Reports & Analytics',
+                monthlyPNL: 'Monthly Profit & Loss',
+                restaurantPerformance: 'Restaurant Performance Analytics',
+                riderPerformance: 'Rider Performance Analytics',
+                customerAnalytics: 'Customer Analytics & Insights',
                 recycleBin: 'Recycle Bin',
                 auditLog: 'System Audit Log',
                 adminMgmt: 'Administrator Management',
@@ -2532,6 +2695,8 @@
 
             if (tabId === 'dashboard') loadDashboard();
             if (tabId === 'dailyEntry') initDailyEntryTab();
+            if (tabId === 'reconciliation') loadReconciliation();
+            if (tabId === 'pendingPayments') loadPendingPayments();
             if (tabId === 'restaurantSettlement') initRestaurantSettlementTab();
             if (tabId === 'expenseMgmt') initExpenseMgmtTab();
             if (tabId === 'vendors') loadRestaurants();
@@ -2539,17 +2704,27 @@
             if (tabId === 'riderSettlement') initRiderSettlementTab();
             if (tabId === 'deliveryBoys') loadDeliveryBoys();
             if (tabId === 'reports') initReports();
+            if (tabId === 'monthlyPNL') renderMonthlyPNL();
+            if (tabId === 'restaurantPerformance') renderRestaurantPerformance();
+            if (tabId === 'riderPerformance') renderRiderPerformance();
+            if (tabId === 'customerAnalytics') renderCustomerAnalytics();
             if (tabId === 'recycleBin') loadRecycleBin();
             if (tabId === 'auditLog') loadAuditLog();
             if (tabId === 'adminMgmt') loadAdmins();
             if (tabId === 'settings') loadSettings();
             if (tabId === 'dayClose') initDayCloseTab();
+
+            // Initialize Flatpickr date pickers after tab is made visible
+            setTimeout(initPillDatePickers, 50);
         }
 
         function initPillDatePickers() {
             if (typeof flatpickr !== 'function') return;
-            document.querySelectorAll('input[type="date"]').forEach(input => {
-                if (input.dataset.pillPickerInit) return;
+            document.querySelectorAll('input[type="date"], input#advSearchDate').forEach(input => {
+                if (input.offsetParent === null) return; // Skip hidden elements
+                if (input._flatpickr) {
+                    input._flatpickr.destroy();
+                }
                 input.dataset.pillPickerInit = 'true';
                 
                 flatpickr(input, {
@@ -2814,28 +2989,143 @@
             renderDashboardCharts(riderOrdersCount, riderEarningsCount);
         }
 
+        // Centralized Role-Based Action Guard
+        function checkRolePermission(action) {
+            const role = currentAdminRecord ? (currentAdminRecord.role || 'Super Admin') : 'Super Admin';
+            
+            if (role === 'Super Admin' || role === 'Administrator') return true;
+
+            const permissions = {
+                'Manager': ['view_dashboard', 'view_orders', 'edit_order', 'view_restaurants', 'view_riders', 'view_reports', 'view_settlements', 'edit_payment_mode'],
+                'Accounts': ['view_dashboard', 'view_orders', 'view_reports', 'manage_expenses', 'manage_rider_settlement', 'manage_restaurant_settlement', 'edit_payment_mode'],
+                'View Only': ['view_dashboard', 'view_orders', 'view_restaurants', 'view_riders', 'view_reports'],
+                'Viewer': ['view_dashboard', 'view_orders', 'view_restaurants', 'view_riders', 'view_reports']
+            };
+
+            const allowedActions = permissions[role] || [];
+            if (allowedActions.includes(action)) return true;
+
+            logAudit('Security', `Permission denied for role '${role}' on action '${action}'`, 'Security', '-', role, action);
+            alert(`Permission Denied: Your role (${role}) does not have access to perform action '${action}'.`);
+            return false;
+        }
+
         function renderDashboardCharts(riderOrders, riderEarns) {
-            Object.values(chartsInstance).forEach(c => c.destroy());
+            Object.values(chartsInstance).forEach(c => { if (c && typeof c.destroy === 'function') c.destroy(); });
+            chartsInstance = {};
 
-            const riders = Object.keys(riderOrders);
-            const ordersData = Object.values(riderOrders);
-            const earnData = riders.map(r => riderEarns[r]);
+            const today = typeof getOperationalDateStr === 'function' ? getOperationalDateStr() : new Date().toISOString().split('T')[0];
 
-            chartsInstance.ordersByRider = new Chart(document.getElementById('chartOrdersByRider'), {
-                type: 'bar',
-                data: { labels: riders, datasets: [{ label: 'Orders', data: ordersData, backgroundColor: '#2563eb', borderRadius: 6 }] },
-                options: { responsive: true, plugins: { legend: { display: false } } }
+            const daysList = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                daysList.push(d.toISOString().split('T')[0]);
+            }
+
+            const salesByDay = daysList.map(dayStr => {
+                return db.entries.filter(e => (typeof normalizeDateStr === 'function' ? normalizeDateStr(e.date) : e.date) === dayStr)
+                    .reduce((sum, e) => sum + Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0), 0);
             });
 
-            chartsInstance.earningsByRider = new Chart(document.getElementById('chartEarningsByRider'), {
-                type: 'bar',
-                data: { labels: riders, datasets: [{ label: 'Earnings (₹)', data: earnData, backgroundColor: '#10b981', borderRadius: 6 }] },
-                options: { responsive: true, plugins: { legend: { display: false } } }
+            const profitByDay = daysList.map(dayStr => {
+                return db.entries.filter(e => (typeof normalizeDateStr === 'function' ? normalizeDateStr(e.date) : e.date) === dayStr)
+                    .reduce((sum, e) => sum + Number(e.profit || 0), 0);
             });
+
+            // 1. Sales Trend
+            const ctxSales = document.getElementById('chartSalesTrend');
+            if (ctxSales) {
+                chartsInstance.salesTrend = new Chart(ctxSales, {
+                    type: 'line',
+                    data: {
+                        labels: daysList.map(d => d.slice(5)),
+                        datasets: [{ label: 'Sales (₹)', data: salesByDay, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.3 }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } }
+                });
+            }
+
+            // 2. Profit Trend
+            const ctxProfit = document.getElementById('chartProfitTrend');
+            if (ctxProfit) {
+                chartsInstance.profitTrend = new Chart(ctxProfit, {
+                    type: 'line',
+                    data: {
+                        labels: daysList.map(d => d.slice(5)),
+                        datasets: [{ label: 'Profit (₹)', data: profitByDay, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } }
+                });
+            }
+
+            // 3. Payment Collection (Cash vs UPI)
+            const ctxPay = document.getElementById('chartPaymentCollection');
+            if (ctxPay) {
+                let cashTot = 0, upiTot = 0;
+                db.entries.filter(e => (typeof normalizeDateStr === 'function' ? normalizeDateStr(e.date) : e.date) === today).forEach(e => {
+                    const mode = String(e.paymentMode || 'Cash').trim();
+                    const c = Number(e.cash || 0);
+                    const u = Number(e.upi || 0);
+                    const tot = (c + u > 0) ? (c + u) : (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+
+                    if (mode === 'Cash') cashTot += (c > 0 ? c : tot);
+                    else if (mode === 'UPI' || mode === 'Online') upiTot += (u > 0 ? u : tot);
+                    else if (mode === 'Cash + UPI' || mode === 'Cash+UPI') { cashTot += c; upiTot += u; }
+                    else { cashTot += tot; }
+                });
+
+                chartsInstance.paymentCollection = new Chart(ctxPay, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Cash', 'UPI'],
+                        datasets: [{ data: [cashTot, upiTot], backgroundColor: ['#f59e0b', '#3b82f6'] }]
+                    },
+                    options: { responsive: true }
+                });
+            }
+
+            // 4. Top 5 Restaurants
+            const ctxRest = document.getElementById('chartTopRestaurants');
+            if (ctxRest) {
+                const restSales = {};
+                db.entries.forEach(e => {
+                    if (e.vendor) restSales[e.vendor] = (restSales[e.vendor] || 0) + Number(e.vendorRate || 0);
+                });
+                const sortedRests = Object.entries(restSales).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+                chartsInstance.topRestaurants = new Chart(ctxRest, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedRests.map(r => r[0]),
+                        datasets: [{ label: 'Sales (₹)', data: sortedRests.map(r => r[1]), backgroundColor: '#8b5cf6', borderRadius: 6 }]
+                    },
+                    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
+                });
+            }
+
+            // 5. Rider Performance
+            const ctxRider = document.getElementById('chartRiderPerformance');
+            if (ctxRider) {
+                const sortedRiders = Object.entries(riderEarns || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+                chartsInstance.riderPerformance = new Chart(ctxRider, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedRiders.map(r => r[0]),
+                        datasets: [{ label: 'Earnings (₹)', data: sortedRiders.map(r => r[1]), backgroundColor: '#6366f1', borderRadius: 6 }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } }
+                });
+            }
         }
 
         function initDailyEntryTab() {
             populateDropdowns();
+            const dateEl = document.getElementById('advSearchDate');
+            if (dateEl && !dateEl.value) {
+                dateEl.value = getOperationalDateStr();
+            }
             loadEntries();
             const role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
             if (role === 'Viewer' || role === 'Operator') {
@@ -3423,16 +3713,29 @@
         }
 
         function populateDropdowns() {
-            const vSelects = [document.getElementById('advSearchVendor'), document.getElementById('entryRestaurant')];
-            vSelects.forEach(sel => {
-                if (!sel) return;
-                const currentVal = sel.value;
-                sel.innerHTML = `<option value="">-- Select Restaurant --</option>` + db.restaurants.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
-                sel.value = currentVal;
-            });
+            const advVendor = document.getElementById('advSearchVendor');
+            if (advVendor) {
+                const currentVal = advVendor.value;
+                advVendor.innerHTML = `<option value="">All Restaurants</option>` + db.restaurants.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+                advVendor.value = currentVal;
+            }
 
-            const bSelects = [document.getElementById('advSearchBoy'), document.getElementById('entryDeliveryBoy'), document.getElementById('settleRider')];
-            bSelects.forEach(sel => {
+            const entryVendor = document.getElementById('entryRestaurant');
+            if (entryVendor) {
+                const currentVal = entryVendor.value;
+                entryVendor.innerHTML = `<option value="">-- Select Restaurant --</option>` + db.restaurants.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+                entryVendor.value = currentVal;
+            }
+
+            const advBoy = document.getElementById('advSearchBoy');
+            if (advBoy) {
+                const currentVal = advBoy.value;
+                advBoy.innerHTML = `<option value="">All Delivery Boys</option>` + db.deliveryBoys.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+                advBoy.value = currentVal;
+            }
+
+            const otherBoys = [document.getElementById('entryDeliveryBoy'), document.getElementById('settleRider')];
+            otherBoys.forEach(sel => {
                 if (!sel) return;
                 const currentVal = sel.value;
                 sel.innerHTML = `<option value="">-- Select Delivery Boy --</option>` + db.deliveryBoys.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
@@ -4684,13 +4987,22 @@
                 return true;
             });
 
+            let totEarned = 0, totPaid = 0;
+            (db.entries || []).forEach(e => { if (e.deliveryBoy) totEarned += Number(e.deliveryCharge || 0); });
+            (db.riderSettlements || []).forEach(s => { totPaid += Number(s.netPayable || 0); });
+            const totPending = Math.max(0, totEarned - totPaid);
+
+            if (document.getElementById('dashRiderTotalEarned')) document.getElementById('dashRiderTotalEarned').innerText = '₹' + totEarned.toFixed(2);
+            if (document.getElementById('dashRiderAlreadyPaid')) document.getElementById('dashRiderAlreadyPaid').innerText = '₹' + totPaid.toFixed(2);
+            if (document.getElementById('dashRiderPendingPayable')) document.getElementById('dashRiderPendingPayable').innerText = '₹' + totPending.toFixed(2);
+
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No settlements found for selected view scope</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="p-4 text-center text-slate-400">No settlements found for selected view scope</td></tr>`;
                 return;
             }
             data.forEach(s => {
                 let actionsHtml = '';
-                if (role !== 'Operator' && role !== 'Viewer') {
+                if (role !== 'Operator' && role !== 'Viewer' && role !== 'View Only') {
                     actionsHtml = `
                         <button onclick="editSettlementSecurityCheck('${s.id}')" class="text-blue-600 hover:text-blue-800 p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button onclick="deleteSettlementSecurityCheck('${s.id}')" class="text-rose-600 hover:text-rose-800 p-1" title="Delete"><i class="fa-solid fa-trash"></i></button>
@@ -4707,10 +5019,15 @@
                     <tr>
                         <td class="p-3.5">${s.date}${closedBadge}</td>
                         <td class="p-3.5 font-bold text-slate-800">${s.rider}</td>
-                        <td class="p-3.5">${s.orders}</td>
-                        <td class="p-3.5 font-bold text-emerald-600">${s.netPayable}</td>
-                        <td class="p-3.5">${s.mode}</td>
-                        <td class="p-3.5"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${s.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${s.status}</span></td>
+                        <td class="p-3.5 text-center font-bold text-slate-700">${s.orders || 0}</td>
+                        <td class="p-3.5 text-right font-medium text-slate-700">₹${Number(s.earnings || 0).toFixed(2)}</td>
+                        <td class="p-3.5 text-right text-emerald-600 font-medium">+₹${Number(s.bonus || 0).toFixed(2)}</td>
+                        <td class="p-3.5 text-right text-rose-600 font-medium">-₹${Number(s.fine || 0).toFixed(2)}</td>
+                        <td class="p-3.5 text-right text-amber-600 font-medium">-₹${Number(s.advance || 0).toFixed(2)}</td>
+                        <td class="p-3.5 text-right font-bold text-blue-600">₹${Number(s.netPayable || 0).toFixed(2)}</td>
+                        <td class="p-3.5">${s.mode || 'Cash'}</td>
+                        <td class="p-3.5"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${s.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${s.status || 'Paid'}</span></td>
+                        <td class="p-3.5 text-slate-500 max-w-xs truncate" title="${s.remarks || ''}">${s.remarks || '-'}</td>
                         <td class="p-3.5 text-right space-x-1">${actionsHtml}</td>
                     </tr>
                 `;
@@ -6078,6 +6395,506 @@
             XLSX.writeFile(workbook, `Day_Close_History_${getDayCloseTodayStr()}.xlsx`);
         }
         /* ================= END DAY CLOSE MODULE ================= */
+
+        // ====================================================
+        // 13 FEATURE ENHANCEMENT HANDLERS
+        // ====================================================
+
+        // 1. CASH & UPI RECONCILIATION
+        function getReconciliationData(dateStr) {
+            const day = dateStr || getOperationalDateStr();
+            let expCash = 0, expUpi = 0;
+
+            (db.entries || []).filter(e => (typeof normalizeDateStr === 'function' ? normalizeDateStr(e.date) : e.date) === day).forEach(e => {
+                const mode = String(e.paymentMode || 'Cash').trim();
+                const c = Number(e.cash || 0);
+                const u = Number(e.upi || 0);
+                const tot = (c + u > 0) ? (c + u) : (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+
+                if (mode === 'Cash') expCash += (c > 0 ? c : tot);
+                else if (mode === 'UPI' || mode === 'Online') expUpi += (u > 0 ? u : tot);
+                else if (mode === 'Cash + UPI' || mode === 'Cash+UPI') { expCash += c; expUpi += u; }
+                else { expCash += tot; }
+            });
+
+            db.reconciliation = db.reconciliation || {};
+            const record = db.reconciliation[day] || { actualCash: expCash, actualUpi: expUpi, remarks: '' };
+
+            const cashDiff = record.actualCash - expCash;
+            const upiDiff = record.actualUpi - expUpi;
+            const cashStatus = Math.abs(cashDiff) < 0.01 ? 'Matched' : 'Difference';
+            const upiStatus = Math.abs(upiDiff) < 0.01 ? 'Matched' : 'Difference';
+
+            return { day, expCash, expUpi, actualCash: record.actualCash, actualUpi: record.actualUpi, cashDiff, upiDiff, cashStatus, upiStatus, remarks: record.remarks };
+        }
+
+        function saveReconciliation(dateStr, actualCash, actualUpi, remarks) {
+            if (!checkRolePermission('manage_expenses')) return;
+            const day = dateStr || getOperationalDateStr();
+            db.reconciliation = db.reconciliation || {};
+            db.reconciliation[day] = { actualCash: Number(actualCash || 0), actualUpi: Number(actualUpi || 0), remarks: remarks || '' };
+            saveDB();
+            logAudit('Reconciliation', `Reconciliation saved for ${day}`, 'Accounting', '-', '-', `Cash: ₹${actualCash}, UPI: ₹${actualUpi}`);
+            loadNotificationCenter();
+        }
+
+        // 4. INVOICE / RECEIPT SYSTEM
+        function showInvoiceReceiptModal(title, detailsHtml) {
+            let modal = document.getElementById('receiptModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'receiptModal';
+                modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div class="flex items-center space-x-2">
+                            <img src="assets/naav-logo.png" class="w-8 h-8 rounded-lg object-contain">
+                            <span class="font-extrabold text-slate-800 text-sm">NAAV ACCOUNTS RECEIPT</span>
+                        </div>
+                        <button onclick="document.getElementById('receiptModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="receiptModalContent" class="space-y-3 text-xs text-slate-700 font-medium">
+                        ${detailsHtml}
+                    </div>
+                    <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                        <button onclick="window.print()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Print</button>
+                        <button onclick="exportReceiptPDF('${title}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold">Download PDF</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function exportReceiptPDF(title) {
+            const el = document.getElementById('receiptModalContent');
+            if (!el || typeof html2pdf === 'undefined') return;
+            html2pdf().set({ margin: 0.4, filename: `NAAV_Receipt_${title}.pdf` }).from(el).save();
+        }
+
+        // 5. WHATSAPP SHARING
+        function shareWhatsAppOrder(orderId) {
+            const entry = (db.entries || []).find(x => x.id === orderId || x.orderId === orderId);
+            if (!entry) return alert('Order record not found');
+
+            const text = `*NAAV ACCOUNTS — ORDER RECEIPT*\n` +
+                         `Order ID: ${entry.orderId || entry.id}\n` +
+                         `Date: ${entry.date}\n` +
+                         `Restaurant: ${entry.vendor || '-'}\n` +
+                         `Rider: ${entry.deliveryBoy || '-'}\n` +
+                         `Food Amount: ₹${Number(entry.vendorRate || 0).toFixed(2)}\n` +
+                         `Delivery Charge: ₹${Number(entry.deliveryCharge || 0).toFixed(2)}\n` +
+                         `Total Amount: ₹${(Number(entry.vendorRate || 0) + Number(entry.deliveryCharge || 0)).toFixed(2)}\n` +
+                         `Payment Mode: ${entry.paymentMode || 'Cash'}\n` +
+                         `Status: ${entry.orderStatus || 'Delivered'}`;
+
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        // 10. SESSION / LOGIN SECURITY & TIMEOUT
+        let sessionTimer = null;
+        function trackAdminLoginSession() {
+            if (currentAdminRecord) {
+                currentAdminRecord.lastLogin = new Date().toLocaleString();
+                currentAdminRecord.currentSessionId = 'SESS_' + Date.now();
+                saveDB();
+            }
+            resetSessionTimeout();
+        }
+
+        function resetSessionTimeout() {
+            if (sessionTimer) clearTimeout(sessionTimer);
+            sessionTimer = setTimeout(() => {
+                if (currentAdminRecord) {
+                    logAudit('Security', 'Session timed out due to inactivity', 'Security', '-', currentAdminRecord.username, '-');
+                    alert('Session expired due to inactivity. Please log in again.');
+                    confirmLogout();
+                }
+            }, 30 * 60 * 1000); // 30 mins inactivity timeout
+        }
+        window.addEventListener('mousemove', resetSessionTimeout);
+        window.addEventListener('keydown', resetSessionTimeout);
+
+        // 11. ADMIN APPROVAL WORKFLOW
+        function requestAdminApproval(actionName, details, callback) {
+            requestSecurityCheck(() => {
+                logAudit('Admin Approval', `Approved: ${actionName}`, 'Security', '-', currentUser || 'Admin', details);
+                if (callback) callback();
+            });
+        }
+
+        // 12. GLOBAL NOTIFICATION CENTER
+        let activeNotifications = [];
+        function loadNotificationCenter() {
+            activeNotifications = [];
+
+            // 1. Pending Restaurant Payments
+            const restPending = calculatePendingRestaurantPayments();
+            if (restPending > 0) {
+                activeNotifications.push({ id: 'rest_pay', title: 'Pending Restaurant Dues', desc: `₹${restPending.toFixed(2)} outstanding to restaurants`, tab: 'restaurantSettlement', type: 'warning' });
+            }
+
+            // 2. Pending Rider Settlements
+            let riderPending = 0;
+            (db.entries || []).forEach(e => { if (e.deliveryBoy && !e.isSettled) riderPending += Number(e.deliveryCharge || 0); });
+            if (riderPending > 0) {
+                activeNotifications.push({ id: 'rider_pay', title: 'Pending Rider Payouts', desc: `₹${riderPending.toFixed(2)} unsettled rider earnings`, tab: 'riderSettlement', type: 'warning' });
+            }
+
+            // 3. Unpaid Orders
+            const unpaidOrders = (db.entries || []).filter(e => e.orderStatus !== 'Paid' && e.orderStatus !== 'Delivered').length;
+            if (unpaidOrders > 0) {
+                activeNotifications.push({ id: 'unpaid_ord', title: 'Unpaid / Pending Orders', desc: `${unpaidOrders} orders pending payment confirmation`, tab: 'dailyEntry', type: 'info' });
+            }
+
+            // 4. Day Close Reminder
+            const todayStr = getDayCloseTodayStr();
+            if (!isDayAlreadyClosed(todayStr)) {
+                activeNotifications.push({ id: 'day_close', title: 'Day Close Required', desc: `Day Close for ${todayStr} is still open`, tab: 'dayClose', type: 'alert' });
+            }
+
+            const badge = document.getElementById('notificationBadge');
+            const list = document.getElementById('notificationList');
+            if (badge) {
+                if (activeNotifications.length > 0) {
+                    badge.innerText = activeNotifications.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            if (list) {
+                if (activeNotifications.length === 0) {
+                    list.innerHTML = `<div class="p-4 text-center text-slate-400">No active alerts</div>`;
+                } else {
+                    list.innerHTML = activeNotifications.map(n => `
+                        <div onclick="selectNotificationItem('${n.tab}')" class="p-3 hover:bg-slate-50 cursor-pointer transition">
+                            <div class="font-bold text-slate-800 text-xs">${n.title}</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">${n.desc}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        function toggleNotificationMenu() {
+            const menu = document.getElementById('headerNotificationMenu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        function markAllNotificationsRead() {
+            const badge = document.getElementById('notificationBadge');
+            if (badge) badge.classList.add('hidden');
+            const menu = document.getElementById('headerNotificationMenu');
+            if (menu) menu.classList.add('hidden');
+        }
+
+        function selectNotificationItem(tabId) {
+            markAllNotificationsRead();
+            switchTab(tabId);
+        }
+
+        // 13. QUICK DATE SWITCHER
+        function applyQuickDateSwitcher(rangeKey) {
+            const today = getOperationalDateStr();
+            let fromDate = today, toDate = today;
+
+            if (rangeKey === 'yesterday') {
+                const y = new Date(today);
+                y.setDate(y.getDate() - 1);
+                fromDate = toDate = y.toISOString().split('T')[0];
+            } else if (rangeKey === 'week') {
+                const now = new Date(today);
+                const dayOfWeek = now.getDay() || 7;
+                const mon = new Date(now);
+                mon.setDate(now.getDate() - dayOfWeek + 1);
+                fromDate = mon.toISOString().split('T')[0];
+            } else if (rangeKey === 'month') {
+                fromDate = today.substring(0, 7) + '-01';
+            }
+
+            const repFrom = document.getElementById('reportFromDate');
+            const repTo = document.getElementById('reportToDate');
+            if (repFrom) repFrom.value = fromDate;
+            if (repTo) repTo.value = toDate;
+
+            const advDate = document.getElementById('advSearchDate');
+            if (advDate) {
+                advDate.value = fromDate;
+            }
+
+            const ordersTab = document.getElementById('tab-dailyEntry');
+            if (ordersTab && !ordersTab.classList.contains('hidden')) {
+                applyAdvancedSearch();
+            } else if (document.getElementById('tab-reports') && !document.getElementById('tab-reports').classList.contains('hidden')) {
+                generateReport();
+            } else {
+                loadDashboard();
+            }
+        }
+
+        // ====================================================
+        // NEW ERP MODULE RENDERERS
+        // ====================================================
+
+        // 1. Reconciliation View Renderer
+        function loadReconciliation() {
+            const container = document.getElementById('reconciliationContent');
+            if (!container) return;
+            const data = getReconciliationData();
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="erp-card p-4 space-y-3 bg-amber-50/40 border border-amber-100">
+                        <h4 class="font-bold text-amber-800 text-xs uppercase tracking-wider">CASH RECONCILIATION</h4>
+                        <div class="flex justify-between text-xs"><span class="text-slate-500">Expected Cash:</span><span class="font-bold text-slate-800">₹${data.expCash.toFixed(2)}</span></div>
+                        <div class="flex justify-between text-xs items-center"><span class="text-slate-500">Actual Cash:</span><input type="number" id="reconActualCash" value="${data.actualCash}" step="0.01" class="w-32 p-1.5 bg-white border border-slate-200 rounded-lg text-right font-bold text-slate-800"></div>
+                        <div class="flex justify-between text-xs"><span class="text-slate-500">Difference:</span><span class="font-bold ${data.cashDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'}">₹${data.cashDiff.toFixed(2)}</span></div>
+                        <div class="flex justify-between text-xs"><span class="text-slate-500">Status:</span><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${data.cashStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${data.cashStatus}</span></div>
+                    </div>
+                    <div class="erp-card p-4 space-y-3 bg-blue-50/40 border border-blue-100">
+                        <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider">UPI RECONCILIATION</h4>
+                        <div class="flex justify-between text-xs"><span class="text-slate-500">Expected UPI:</span><span class="font-bold text-slate-800">₹${data.expUpi.toFixed(2)}</span></div>
+                        <div class="flex justify-between text-xs items-center"><span class="text-slate-500">Actual UPI:</span><input type="number" id="reconActualUpi" value="${data.actualUpi}" step="0.01" class="w-32 p-1.5 bg-white border border-slate-200 rounded-lg text-right font-bold text-slate-800"></div>
+                        <div class="flex justify-between text-xs"><span class="text-slate-500">Difference:</span><span class="font-bold ${data.upiDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'}">₹${data.upiDiff.toFixed(2)}</span></div>
+                        <div class="flex justify-between text-xs"><span class="text-slate-500">Status:</span><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${data.upiStatus === 'Matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${data.upiStatus}</span></div>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <button onclick="saveReconciliation(getOperationalDateStr(), document.getElementById('reconActualCash').value, document.getElementById('reconActualUpi').value)" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold shadow-sm transition">Save Reconciliation</button>
+                </div>
+            `;
+        }
+
+        // 2. Pending Payments Renderer
+        function loadPendingPayments() {
+            const container = document.getElementById('pendingPaymentsContent');
+            if (!container) return;
+            let pendingItems = [];
+            
+            // Unsettled Restaurant Orders
+            (db.entries || []).filter(e => e.vendor && !e.isRestSettled).forEach(e => {
+                pendingItems.push({ type: 'Restaurant', ref: e.orderId || e.id, entity: e.vendor, amount: Number(e.vendorRate || 0), date: e.date, mode: e.paymentMode || 'Cash', status: 'Pending' });
+            });
+
+            // Unsettled Rider Earnings
+            (db.entries || []).filter(e => e.deliveryBoy && !e.isSettled).forEach(e => {
+                pendingItems.push({ type: 'Rider', ref: e.orderId || e.id, entity: e.deliveryBoy, amount: Number(e.deliveryCharge || 0), date: e.date, mode: e.paymentMode || 'Cash', status: 'Pending' });
+            });
+
+            if (pendingItems.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">No pending payments recorded. All accounts are settled!</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                        <thead>
+                            <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                <th class="p-3">Type</th>
+                                <th class="p-3">Ref ID</th>
+                                <th class="p-3">Entity</th>
+                                <th class="p-3">Amount</th>
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Payment Mode</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${pendingItems.slice(0, 50).map(item => `
+                                <tr>
+                                    <td class="p-3 font-semibold"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${item.type === 'Restaurant' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${item.type}</span></td>
+                                    <td class="p-3 font-mono font-bold">${item.ref}</td>
+                                    <td class="p-3 font-bold text-slate-800">${item.entity}</td>
+                                    <td class="p-3 font-extrabold text-slate-800">₹${item.amount.toFixed(2)}</td>
+                                    <td class="p-3 text-slate-500">${item.date}</td>
+                                    <td class="p-3">${item.mode}</td>
+                                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">${item.status}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // 3. Monthly P&L Renderer
+        function renderMonthlyPNL() {
+            const container = document.getElementById('monthlyPNLContent');
+            if (!container) return;
+            const entries = db.entries || [];
+            const expenses = db.expenses || [];
+
+            const foodSales = entries.reduce((s, e) => s + Number(e.vendorRate || 0), 0);
+            const delCharges = entries.reduce((s, e) => s + Number(e.deliveryCharge || 0), 0);
+            const totalRevenue = foodSales + delCharges;
+
+            const totalExpenses = expenses.reduce((s, ex) => s + Number(ex.amount || 0), 0);
+            const netProfit = entries.reduce((s, e) => s + Number(e.profit || 0), 0) - totalExpenses;
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="erp-card p-4 bg-emerald-50/50 border border-emerald-100">
+                        <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Revenue</span>
+                        <span class="text-lg font-extrabold text-emerald-800">₹${totalRevenue.toFixed(2)}</span>
+                    </div>
+                    <div class="erp-card p-4 bg-rose-50/50 border border-rose-100">
+                        <span class="block text-[10px] font-bold text-rose-600 uppercase tracking-wider">Operating Expenses</span>
+                        <span class="text-lg font-extrabold text-rose-800">₹${totalExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="erp-card p-4 ${netProfit >= 0 ? 'bg-indigo-50/50 border border-indigo-100 text-indigo-800' : 'bg-rose-100 border border-rose-200 text-rose-800'}">
+                        <span class="block text-[10px] font-bold uppercase tracking-wider">Net Profit</span>
+                        <span class="text-lg font-extrabold">₹${netProfit.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 7. Restaurant Performance Renderer
+        function renderRestaurantPerformance() {
+            const container = document.getElementById('restaurantPerformanceContent');
+            if (!container) return;
+            const stats = {};
+            (db.restaurants || []).forEach(r => { stats[r.name] = { orders: 0, sales: 0, naav: 0 }; });
+
+            (db.entries || []).forEach(e => {
+                if (e.vendor && stats[e.vendor]) {
+                    stats[e.vendor].orders += 1;
+                    stats[e.vendor].sales += Number(e.vendorRate || 0);
+                    stats[e.vendor].naav += Number(e.naavTransferred || 0);
+                }
+            });
+
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                        <thead>
+                            <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                <th class="p-3">Restaurant</th>
+                                <th class="p-3">Total Orders</th>
+                                <th class="p-3">Food Sales</th>
+                                <th class="p-3">NAAV Transferred</th>
+                                <th class="p-3">Avg Order Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${Object.keys(stats).map(name => {
+                                const s = stats[name];
+                                const avg = s.orders > 0 ? (s.sales / s.orders) : 0;
+                                return `
+                                    <tr>
+                                        <td class="p-3 font-bold text-slate-800">${name}</td>
+                                        <td class="p-3 font-semibold">${s.orders}</td>
+                                        <td class="p-3 font-extrabold text-blue-700">₹${s.sales.toFixed(2)}</td>
+                                        <td class="p-3 font-extrabold text-purple-700">₹${s.naav.toFixed(2)}</td>
+                                        <td class="p-3 text-slate-600">₹${avg.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // 8. Rider Performance Renderer
+        function renderRiderPerformance() {
+            const container = document.getElementById('riderPerformanceContent');
+            if (!container) return;
+            const stats = {};
+            (db.deliveryBoys || []).forEach(d => { stats[d.name] = { orders: 0, earnings: 0 }; });
+
+            (db.entries || []).forEach(e => {
+                if (e.deliveryBoy && stats[e.deliveryBoy]) {
+                    stats[e.deliveryBoy].orders += 1;
+                    stats[e.deliveryBoy].earnings += Number(e.deliveryCharge || 0);
+                }
+            });
+
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                        <thead>
+                            <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                <th class="p-3">Rider Name</th>
+                                <th class="p-3">Deliveries</th>
+                                <th class="p-3">Delivery Earnings</th>
+                                <th class="p-3">Avg Earnings / Order</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${Object.keys(stats).map(name => {
+                                const s = stats[name];
+                                const avg = s.orders > 0 ? (s.earnings / s.orders) : 0;
+                                return `
+                                    <tr>
+                                        <td class="p-3 font-bold text-slate-800">${name}</td>
+                                        <td class="p-3 font-semibold">${s.orders}</td>
+                                        <td class="p-3 font-extrabold text-emerald-700">₹${s.earnings.toFixed(2)}</td>
+                                        <td class="p-3 text-slate-600">₹${avg.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // 9. Customer Analytics Renderer
+        function renderCustomerAnalytics() {
+            const container = document.getElementById('customerAnalyticsContent');
+            if (!container) return;
+            const customers = {};
+
+            (db.entries || []).forEach(e => {
+                const name = e.customerName || 'Walk-in / Direct';
+                if (!customers[name]) customers[name] = { count: 0, totalSpend: 0 };
+                customers[name].count += 1;
+                customers[name].totalSpend += (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+            });
+
+            const uniqueCount = Object.keys(customers).length;
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="erp-card p-4 bg-purple-50/50 border border-purple-100">
+                        <span class="block text-[10px] font-bold text-purple-600 uppercase tracking-wider">Total Unique Customers</span>
+                        <span class="text-lg font-extrabold text-purple-800">${uniqueCount}</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                        <thead>
+                            <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                <th class="p-3">Customer Name</th>
+                                <th class="p-3">Orders Count</th>
+                                <th class="p-3">Total Spend</th>
+                                <th class="p-3">Avg Order Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${Object.keys(customers).map(name => {
+                                const c = customers[name];
+                                const avg = c.count > 0 ? (c.totalSpend / c.count) : 0;
+                                return `
+                                    <tr>
+                                        <td class="p-3 font-bold text-slate-800">${name}</td>
+                                        <td class="p-3 font-semibold">${c.count}</td>
+                                        <td class="p-3 font-extrabold text-blue-700">₹${c.totalSpend.toFixed(2)}</td>
+                                        <td class="p-3 text-slate-600">₹${avg.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        /* ================= END 13 FEATURE ENHANCEMENTS ================= */
     </script>
 </body>
 </html>
