@@ -9,6 +9,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -70,6 +72,126 @@
             .no-print { display: none !important; }
             .print-only { display: block !important; }
             body { background: white !important; }
+        }
+
+        /* Modern Pill Selected Calendar & Date Picker Styling */
+        input[type="date"] {
+            cursor: pointer;
+            position: relative;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            border-radius: 9999px;
+            padding: 4px 8px;
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            transition: all 0.2s ease;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            background-color: rgba(245, 158, 11, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* Pill Selected Calendar Popup Container */
+        .flatpickr-calendar {
+            background: #ffffff !important;
+            border-radius: 1.25rem !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+            padding: 0.75rem !important;
+            font-family: 'Inter', sans-serif !important;
+            width: 308px !important;
+        }
+
+        .flatpickr-day {
+            border-radius: 9999px !important; /* Rounded Pill / Capsule Shape [ 13 ] */
+            height: 36px !important;
+            line-height: 36px !important;
+            margin: 2px 0 !important;
+            font-weight: 500 !important;
+            color: #334155 !important;
+        }
+
+        /* Selected Date Pill Capsule Shape [ 13 ] */
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+            background: #f59e0b !important; /* ERP Gold Accent Pill */
+            color: #09090b !important;
+            font-weight: 700 !important;
+            border-radius: 9999px !important;
+            border: none !important;
+            box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3) !important;
+        }
+
+        .flatpickr-day.selected:hover {
+            background: #d97706 !important;
+            color: #ffffff !important;
+        }
+
+        /* Today Date Subtle Indicator */
+        .flatpickr-day.today {
+            border: 1.5px solid #f59e0b !important;
+            border-radius: 9999px !important;
+            color: #d97706 !important;
+            font-weight: 600 !important;
+        }
+
+        .flatpickr-day.today.selected {
+            background: #f59e0b !important;
+            color: #09090b !important;
+            border: none !important;
+        }
+
+        /* Hover Date Pill */
+        .flatpickr-day:hover {
+            border-radius: 9999px !important;
+            background: #fef3c7 !important;
+            color: #92400e !important;
+        }
+
+        /* Compact Weekday Headers */
+        .flatpickr-weekday {
+            color: #64748b !important;
+            font-weight: 700 !important;
+            font-size: 0.68rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+        }
+
+        /* Month Navigation Headers */
+        .flatpickr-months {
+            align-items: center !important;
+            padding-bottom: 0.5rem !important;
+        }
+
+        .flatpickr-current-month {
+            font-size: 0.9rem !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+        }
+
+        .flatpickr-prev-month, .flatpickr-next-month {
+            color: #475569 !important;
+            border-radius: 9999px !important;
+            padding: 6px !important;
+            transition: all 0.2s ease !important;
+            fill: #475569 !important;
+        }
+
+        .flatpickr-prev-month:hover, .flatpickr-next-month:hover {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+
+        /* Calendar Footer (Today & Clear Actions) */
+        .flatpickr-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+            border-top: 1px solid #f1f5f9;
         }
     </style>
 </head>
@@ -491,16 +613,16 @@
     <div id="appContainer" class="flex h-screen w-screen overflow-hidden hidden">
         
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 no-print flex-shrink-0">
+        <aside class="w-64 bg-zinc-950 text-zinc-200 flex flex-col justify-between border-r border-zinc-800/80 no-print flex-shrink-0">
             <div>
                 <!-- Brand Header -->
-                <div class="p-5 flex items-center space-x-3 border-b border-slate-800/80 bg-slate-950/40">
-                    <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-lg shadow-blue-600/30 flex-shrink-0">
-                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                <div class="p-5 flex items-center space-x-3 border-b border-zinc-800/80 bg-zinc-950/80">
+                    <div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-lg shadow-amber-500/10 border border-zinc-800 flex-shrink-0">
+                        <img src="assets/naav-logo.png" alt="NAAV Logo" class="w-full h-full object-contain rounded-lg">
                     </div>
                     <div class="min-w-0 flex-1">
                         <h2 id="sidebarCompanyName" class="font-bold text-white text-sm tracking-tight truncate">NAAV ACCOUNTS</h2>
-                        <span id="sidebarUserRole" class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Role</span>
+                        <span id="sidebarUserRole" class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Role</span>
                     </div>
                 </div>
                 
@@ -511,9 +633,9 @@
             </div>
             
             <!-- Sticky Logout Footer -->
-            <div class="p-3 border-t border-slate-800 bg-slate-950/40">
-                <button onclick="promptLogout()" class="w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition text-xs font-semibold">
-                    <i class="fa-solid fa-right-from-bracket w-4 text-center"></i><span>Logout</span>
+            <div class="p-3 border-t border-zinc-800/80 bg-zinc-950/80">
+                <button onclick="promptLogout()" class="w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 transition text-xs font-semibold">
+                    <i class="fa-solid fa-right-from-bracket w-4 text-center text-amber-400"></i><span>Logout</span>
                 </button>
             </div>
         </aside>
@@ -633,6 +755,18 @@
                             </div>
                         </div>
 
+                        <!-- NAAV Transferred -->
+                        <div class="erp-card p-5 flex items-center justify-between">
+                            <div class="space-y-1">
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">NAAV Transferred</p>
+                                <h3 id="dashNaavTransferred" class="text-2xl font-extrabold text-purple-600">₹0.00</h3>
+                                <p class="text-[10px] text-purple-600 font-semibold">Amount transferred to NAAV</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl shadow-sm border border-purple-100">
+                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            </div>
+                        </div>
+
                         <!-- Net Profit -->
                         <div class="erp-card p-5 flex items-center justify-between">
                             <div class="space-y-1">
@@ -731,10 +865,22 @@
                 <!-- 2. DAILY ENTRY -->
                 <div id="tab-dailyEntry" class="tab-content hidden space-y-6">
                     <div class="erp-card p-5 space-y-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Search / Filter</label>
                                 <input type="text" id="advSearchText" oninput="applyAdvancedSearch()" placeholder="Keyword search..." class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">View Scope</label>
+                                <select id="advSearchScope" onchange="applyAdvancedSearch()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold text-slate-700">
+                                    <option value="active">Active / Open Days Only</option>
+                                    <option value="closed">Closed / Archived Days Only</option>
+                                    <option value="all">All Records (Open & Closed)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Filter Date</label>
+                                <input type="date" id="advSearchDate" onchange="applyAdvancedSearch()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Restaurant</label>
@@ -1104,7 +1250,14 @@
                             </form>
                         </div>
                         <div class="lg:col-span-2 erp-card p-6 space-y-4">
-                            <h3 class="font-bold text-slate-800 text-base">Settlement History</h3>
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-slate-800 text-base">Settlement History</h3>
+                                <select id="riderSettleScope" onchange="loadSettlements()" class="p-2 bg-surface border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                    <option value="active">Active / Open Days Only</option>
+                                    <option value="closed">Closed / Historical Days Only</option>
+                                    <option value="all">All Dates</option>
+                                </select>
+                            </div>
                             <div class="overflow-x-auto max-h-[600px]">
                                 <table class="w-full text-left border-collapse text-xs whitespace-nowrap erp-table">
                                     <thead>
@@ -1147,37 +1300,76 @@
 
                 <!-- 7. REPORTS -->
                 <div id="tab-reports" class="tab-content hidden space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 erp-card p-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Report Type</label>
-                            <select id="reportType" onchange="generateReport()" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
-                                <option value="daily">Daily Report</option>
-                                <option value="weekly">Weekly Report</option>
-                                <option value="monthly">Monthly Report</option>
-                                <option value="yearly">Yearly Report</option>
-                                <option value="dateRange">Date Range Report</option>
-                                <option value="restaurant">Restaurant Report</option>
-                                <option value="restaurantSettlement">Restaurant Settlement Report</option>
-                                <option value="rider">Rider Report</option>
-                                <option value="profit">Profit Report</option>
-                                <option value="expense">Expense Report</option>
-                                <option value="order">Order Report</option>
-                                <option value="dailyExpense">Daily Expense Report</option>
-                                <option value="weeklyExpense">Weekly Expense Report</option>
-                                <option value="monthlyExpense">Monthly Expense Report</option>
-                                <option value="yearlyExpense">Yearly Expense Report</option>
-                                <option value="categoryExpense">Category-wise Expense Report</option>
-                                <option value="paymentModeExpense">Payment Mode Report</option>
-                            </select>
+                    <div class="erp-card p-4 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Report Type</label>
+                                <select id="reportType" onchange="generateReport()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                    <option value="daily">1. Daily Report</option>
+                                    <option value="weekly">2. Weekly Report</option>
+                                    <option value="monthly">3. Monthly Report</option>
+                                    <option value="customDate">4. Custom Date Report</option>
+                                    <option value="order">5. Orders Report</option>
+                                    <option value="restaurant">6. Restaurant Report</option>
+                                    <option value="rider">7. Rider Report</option>
+                                    <option value="expense">8. Expense Report</option>
+                                    <option value="profit">9. Profit Report</option>
+                                    <option value="payment">10. Payment Report</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">From Date</label>
+                                <input type="date" id="reportFromDate" onchange="generateReport()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">To Date</label>
+                                <input type="date" id="reportToDate" onchange="generateReport()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Restaurant</label>
+                                <select id="reportRestaurant" onchange="generateReport()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                    <option value="">All Restaurants</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Rider</label>
+                                <select id="reportRider" onchange="generateReport()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                    <option value="">All Riders</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Payment Mode</label>
+                                <select id="reportPaymentMode" onchange="generateReport()" class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                    <option value="">All Payment Modes</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Cash+UPI">Cash+UPI</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="flex items-end space-x-2 sm:col-span-3">
-                            <button onclick="window.print()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"><i class="fa-solid fa-print mr-1"></i> Print</button>
-                            <button onclick="exportXLSX()" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"><i class="fa-solid fa-file-excel mr-1"></i> Excel</button>
-                            <button onclick="exportPDF()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm shadow-indigo-600/20 transition"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                            <button onclick="resetReportFilters()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200 flex items-center space-x-1">
+                                <i class="fa-solid fa-rotate-left"></i><span>Reset Filters</span>
+                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="window.print()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200 flex items-center space-x-1">
+                                    <i class="fa-solid fa-print"></i><span>Print</span>
+                                </button>
+                                <button onclick="exportCSV()" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-file-csv"></i><span>CSV</span>
+                                </button>
+                                <button onclick="exportXLSX()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-file-excel"></i><span>Excel</span>
+                                </button>
+                                <button onclick="exportPDF()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm shadow-indigo-600/20 transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-file-pdf"></i><span>PDF</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div id="reportPrintArea" class="erp-card p-6 space-y-4">
-                        <div id="reportContent" class="space-y-4"></div>
+                    <div id="reportPrintArea" class="erp-card p-6 space-y-6">
+                        <div id="reportContent" class="space-y-6"></div>
                     </div>
                 </div>
 
@@ -1643,6 +1835,60 @@
         </div>
     </div>
 
+    <!-- CHANGE PAYMENT MODE MODAL -->
+    <div id="paymentModeModal" onclick="if(event.target===this)closePaymentModeModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-base font-bold text-slate-800 flex items-center"><i class="fa-solid fa-wallet text-blue-600 mr-2"></i>Change Payment Mode</h3>
+                <button onclick="closePaymentModeModal()" class="text-slate-400 hover:text-slate-600 transition p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <input type="hidden" id="pmModalEntryId">
+
+            <div class="text-xs text-slate-500 font-medium bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                <div>Order ID: <span id="pmModalOrderId" class="font-mono font-bold text-blue-600"></span></div>
+                <div>Total Amount: <span id="pmModalTotalAmount" class="font-extrabold text-slate-800">₹0.00</span></div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl transition border border-slate-200">
+                    <input type="radio" name="pmMode" value="Cash" onchange="togglePmModalMode()" class="text-blue-600 focus:ring-blue-500">
+                    <span>Cash</span>
+                </label>
+                <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl transition border border-slate-200">
+                    <input type="radio" name="pmMode" value="UPI" onchange="togglePmModalMode()" class="text-blue-600 focus:ring-blue-500">
+                    <span>UPI</span>
+                </label>
+                <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl transition border border-slate-200">
+                    <input type="radio" name="pmMode" value="Cash + UPI" onchange="togglePmModalMode()" class="text-blue-600 focus:ring-blue-500">
+                    <span>Cash + UPI</span>
+                </label>
+            </div>
+
+            <div id="pmSplitSection" class="hidden space-y-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Cash Amount: ₹</label>
+                    <input type="number" step="any" id="pmCashAmt" oninput="autoCalcPmUpiAmt()" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">UPI Amount: ₹</label>
+                    <input type="number" step="any" id="pmUpiAmt" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0">
+                </div>
+                <div class="text-[11px] font-bold text-slate-500 pt-1 border-t border-slate-200 flex justify-between">
+                    <span>Total Amount:</span>
+                    <span id="pmSplitTotalDisplay" class="font-extrabold text-slate-800">₹0.00</span>
+                </div>
+            </div>
+
+            <div id="pmErrorMsg" class="text-rose-600 text-xs font-semibold hidden"></div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closePaymentModeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Cancel</button>
+                <button type="button" id="pmSaveBtn" onclick="savePaymentModeChange()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let db = {
         settings: { companyName: 'NAAV ACCOUNTS', customCategories: [], lastBackupDate: 'Never' },
@@ -2023,11 +2269,11 @@
 
             nav.innerHTML = items.map(i => {
                 if (i.type === 'divider') {
-                    return `<div class="my-3 border-t border-slate-800/80"></div>`;
+                    return `<div class="my-3 border-t border-zinc-800/80"></div>`;
                 }
                 return `
-                    <button onclick="switchTab('${i.id}')" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white transition group text-xs font-semibold" data-tab="${i.id}">
-                        <div class="w-7 h-7 rounded-lg bg-slate-800/80 group-hover:bg-blue-600 group-hover:text-white text-slate-400 flex items-center justify-center transition shadow-sm">
+                    <button onclick="switchTab('${i.id}')" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-zinc-300 hover:bg-amber-500/10 hover:text-amber-300 transition group text-xs font-semibold" data-tab="${i.id}">
+                        <div class="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 text-amber-400 flex items-center justify-center transition shadow-sm group-hover:border-amber-500/40 group-hover:text-amber-300">
                             <i class="fa-solid ${i.icon}"></i>
                         </div>
                         <span class="truncate">${i.label}</span>
@@ -2061,22 +2307,24 @@
 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(el => {
-                el.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/20');
+                el.classList.remove('bg-amber-500', 'text-zinc-950', 'font-bold', 'shadow-md', 'shadow-amber-500/20');
+                el.classList.add('text-zinc-300');
                 const iconBox = el.querySelector('div');
                 if (iconBox) {
-                    iconBox.classList.remove('bg-white/20', 'text-white');
-                    iconBox.classList.add('bg-slate-800/80', 'text-slate-400');
+                    iconBox.classList.remove('bg-zinc-950', 'text-amber-400');
+                    iconBox.classList.add('bg-zinc-900', 'border', 'border-zinc-800', 'text-amber-400');
                 }
             });
             
             document.getElementById('tab-' + tabId).classList.remove('hidden');
             const btn = document.querySelector(`[data-tab="${tabId}"]`);
             if (btn) {
-                btn.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/20');
+                btn.classList.remove('text-zinc-300');
+                btn.classList.add('bg-amber-500', 'text-zinc-950', 'font-bold', 'shadow-md', 'shadow-amber-500/20');
                 const iconBox = btn.querySelector('div');
                 if (iconBox) {
-                    iconBox.classList.remove('bg-slate-800/80', 'text-slate-400');
-                    iconBox.classList.add('bg-white/20', 'text-white');
+                    iconBox.classList.remove('bg-zinc-900', 'border', 'border-zinc-800', 'text-amber-400');
+                    iconBox.classList.add('bg-zinc-950', 'text-amber-400');
                 }
             }
 
@@ -2114,6 +2362,56 @@
             if (tabId === 'dayClose') initDayCloseTab();
         }
 
+        function initPillDatePickers() {
+            if (typeof flatpickr !== 'function') return;
+            document.querySelectorAll('input[type="date"]').forEach(input => {
+                if (input.dataset.pillPickerInit) return;
+                input.dataset.pillPickerInit = 'true';
+                
+                flatpickr(input, {
+                    dateFormat: 'Y-m-d',
+                    allowInput: true,
+                    monthSelectorType: 'static',
+                    prevArrow: '<i class="fa-solid fa-chevron-left text-xs"></i>',
+                    nextArrow: '<i class="fa-solid fa-chevron-right text-xs"></i>',
+                    onChange: function(selectedDates, dateStr) {
+                        input.value = dateStr;
+                        const event = new Event('change', { bubbles: true });
+                        input.dispatchEvent(event);
+                    },
+                    onReady: function(selectedDates, dateStr, instance) {
+                        if (!instance.calendarContainer.querySelector('.flatpickr-footer')) {
+                            const footer = document.createElement('div');
+                            footer.className = 'flatpickr-footer';
+                            
+                            const todayBtn = document.createElement('button');
+                            todayBtn.type = 'button';
+                            todayBtn.className = 'text-[11px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded-full transition';
+                            todayBtn.innerText = 'Today';
+                            todayBtn.onclick = function() {
+                                const todayStr = typeof getOperationalDateStr === 'function' ? getOperationalDateStr() : new Date().toISOString().split('T')[0];
+                                instance.setDate(todayStr, true);
+                            };
+
+                            const clearBtn = document.createElement('button');
+                            clearBtn.type = 'button';
+                            clearBtn.className = 'text-[11px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-full transition';
+                            clearBtn.innerText = 'Clear';
+                            clearBtn.onclick = function() {
+                                instance.clear();
+                                const event = new Event('change', { bubbles: true });
+                                input.dispatchEvent(event);
+                            };
+
+                            footer.appendChild(todayBtn);
+                            footer.appendChild(clearBtn);
+                            instance.calendarContainer.appendChild(footer);
+                        }
+                    }
+                });
+            });
+        }
+
         function initApp() {
             if (!currentUser || !currentAdminRecord) {
                 showLoginScreen();
@@ -2123,6 +2421,7 @@
             document.getElementById('sidebarCompanyName').innerText = db.settings.companyName || 'NAAV ACCOUNTS';
             document.getElementById('loginCompanyName').innerText = db.settings.companyName || 'NAAV ACCOUNTS';
             switchTab('dashboard');
+            setTimeout(initPillDatePickers, 100);
         }
 
         function generateOrderId() {
@@ -2176,7 +2475,7 @@
         }
 
         function loadDashboard() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = typeof getOperationalDateStr === 'function' ? getOperationalDateStr() : new Date().toISOString().split('T')[0];
             const currentMonthStr = today.substring(0, 7);
 
             const now = new Date();
@@ -2187,6 +2486,7 @@
 
             let todaysOrders = 0;
             let todaysGrossProfit = 0;
+            let todaysNaavTransferred = 0;
             let weeklyProfit = 0;
             let monthlyProfit = 0;
 
@@ -2200,18 +2500,20 @@
             db.entries.forEach(e => {
                 const profit = Number(e.profit || 0);
                 const orderAmt = Number(e.vendorRate || 0);
+                const eDate = typeof normalizeDateStr === 'function' ? normalizeDateStr(e.date) : e.date;
                 totalOrderValue += orderAmt;
 
-                if (e.date === today) {
+                if (eDate === today) {
                     todaysOrders++;
                     todaysGrossProfit += profit;
+                    todaysNaavTransferred += Number(e.naavTransferred || 0);
                 }
 
-                if (e.date >= mondayStr && e.date <= today) {
+                if (eDate >= mondayStr && eDate <= today) {
                     weeklyProfit += profit;
                 }
 
-                if (e.date && e.date.startsWith(currentMonthStr)) {
+                if (eDate && eDate.startsWith(currentMonthStr)) {
                     monthlyProfit += profit;
                 }
 
@@ -2230,8 +2532,9 @@
             let todayExpenses = 0;
             db.expenses.forEach(ex => {
                 const amt = Number(ex.amount || 0);
+                const exDate = typeof normalizeDateStr === 'function' ? normalizeDateStr(ex.date) : ex.date;
                 totalExpenses += amt;
-                if (ex.date === today) todayExpenses += amt;
+                if (exDate === today) todayExpenses += amt;
             });
 
             let todaysNetProfit = todaysGrossProfit - todayExpenses;
@@ -2281,6 +2584,9 @@
 
             document.getElementById('dashTodaysOrders').innerText = todaysOrders;
             document.getElementById('dashGrossProfit').innerText = '₹' + todaysGrossProfit.toFixed(2);
+            if (document.getElementById('dashNaavTransferred')) {
+                document.getElementById('dashNaavTransferred').innerText = '₹' + todaysNaavTransferred.toFixed(2);
+            }
             document.getElementById('dashTotalExpenses').innerText = '₹' + todayExpenses.toFixed(2);
             document.getElementById('dashNetProfit').innerText = '₹' + todaysNetProfit.toFixed(2);
             document.getElementById('dashWeeklyProfit').innerText = '₹' + weeklyProfit.toFixed(2);
@@ -2921,25 +3227,88 @@
             });
         }
 
+        function getOperationalDateStr() {
+            if (typeof getDayCloseTodayStr === 'function') {
+                return getDayCloseTodayStr();
+            }
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function isHistoricalDate(dateStr) {
+            if (!dateStr) return false;
+            const normDate = typeof normalizeDateStr === 'function' ? normalizeDateStr(dateStr) : String(dateStr).trim();
+            const opDate = typeof normalizeDateStr === 'function' ? normalizeDateStr(getOperationalDateStr()) : getOperationalDateStr();
+            return normDate < opDate;
+        }
+
+        function isOrderClosed(e) {
+            if (!e) return false;
+            if (Boolean(e.isClosed)) return true;
+            if (isDayAlreadyClosed(e.date)) return true;
+            return isHistoricalDate(e.date);
+        }
+
+        function matchOrderDate(eDate, filterDate) {
+            if (!filterDate) return true;
+            if (!eDate) return false;
+            const normE = typeof normalizeDateStr === 'function' ? normalizeDateStr(eDate) : String(eDate).trim();
+            const normF = typeof normalizeDateStr === 'function' ? normalizeDateStr(filterDate) : String(filterDate).trim();
+            return normE === normF;
+        }
+
         function loadEntries(filtered = null) {
             const tbody = document.getElementById('entryTableBody');
+            if (!tbody) return;
+
+            if (!tbody.dataset.pmListenerAttached) {
+                tbody.dataset.pmListenerAttached = 'true';
+                tbody.addEventListener('click', function(e) {
+                    const pill = e.target.closest('.pm-pill-btn');
+                    if (!pill) return;
+                    const orderId = pill.getAttribute('data-order-id');
+                    if (orderId && typeof window.openPaymentModeModal === 'function') {
+                        window.openPaymentModeModal(orderId);
+                    }
+                });
+            }
+
             tbody.innerHTML = '';
-            const data = filtered || db.entries;
+            
+            let data = filtered;
+            if (!data) {
+                const scopeEl = document.getElementById('advSearchScope');
+                const scope = scopeEl ? scopeEl.value : 'active';
+                const dateEl = document.getElementById('advSearchDate');
+                const targetDate = dateEl ? dateEl.value : '';
+
+                data = (db.entries || []).filter(e => {
+                    const isClosed = isOrderClosed(e);
+                    if (targetDate && !matchOrderDate(e.date, targetDate)) return false;
+                    if (scope === 'active') return !isClosed;
+                    if (scope === 'closed') return isClosed;
+                    return true;
+                });
+            }
+
             const role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
+            const countEl = document.getElementById('filterCount');
 
             if (data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="15" class="p-4 text-center text-slate-400">No entries found</td></tr>`;
-                document.getElementById('filterCount').innerText = 'Showing 0 entries';
+                if (countEl) countEl.innerText = 'Showing 0 entries';
                 return;
             }
 
-            document.getElementById('filterCount').innerText = `Showing ${data.length} entries`;
+            if (countEl) countEl.innerText = `Showing ${data.length} entries`;
 
             data.forEach((e) => {
                 const status = e.orderStatus || 'Pending';
                 const statusBadge = status === 'Paid' 
                     ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 cursor-default">Paid</span>`
                     : (role === 'Viewer' ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">Pending</span>` : `<span onclick="requestStatusChange('${e.id}')" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 transition" title="Click to mark as Paid">Pending</span>`);
+
+                const isClosedDay = isOrderClosed(e);
+                const closedBadge = isClosedDay ? `<span class="ml-1 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200" title="Archived Historical Day">Closed</span>` : '';
 
                 let actionsHtml = `
                     <button onclick="showOrderReceipt('${e.id}')" class="text-slate-400 hover:text-emerald-600 transition p-1" title="View Receipt"><i class="fa-solid fa-receipt"></i></button>
@@ -2952,10 +3321,24 @@
                     `;
                 }
 
+                let pmBadge = '';
+                const c = Number(e.cash || 0);
+                const u = Number(e.upi || 0);
+                const targetId = e.id || e.orderId;
+                if (c > 0 && u > 0) {
+                    pmBadge = `<span class="pm-pill-btn px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 cursor-pointer hover:bg-indigo-200 transition inline-flex items-center space-x-1 shadow-sm border border-indigo-200/60" data-order-id="${targetId}" title="Click to change payment mode"><span class="pointer-events-none">Cash + UPI</span><i class="fa-solid fa-pen text-[8px] ml-1 opacity-60 pointer-events-none"></i></span>`;
+                } else if (c > 0) {
+                    pmBadge = `<span class="pm-pill-btn px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 cursor-pointer hover:bg-emerald-200 transition inline-flex items-center space-x-1 shadow-sm border border-emerald-200/60" data-order-id="${targetId}" title="Click to change payment mode"><span class="pointer-events-none">Cash</span><i class="fa-solid fa-pen text-[8px] ml-1 opacity-60 pointer-events-none"></i></span>`;
+                } else if (u > 0) {
+                    pmBadge = `<span class="pm-pill-btn px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 cursor-pointer hover:bg-purple-200 transition inline-flex items-center space-x-1 shadow-sm border border-purple-200/60" data-order-id="${targetId}" title="Click to change payment mode"><span class="pointer-events-none">UPI</span><i class="fa-solid fa-pen text-[8px] ml-1 opacity-60 pointer-events-none"></i></span>`;
+                } else {
+                    pmBadge = `<span class="pm-pill-btn px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 transition inline-flex items-center space-x-1 shadow-sm border border-slate-200/60" data-order-id="${targetId}" title="Click to change payment mode"><span class="pointer-events-none">Cash</span><i class="fa-solid fa-pen text-[8px] ml-1 opacity-60 pointer-events-none"></i></span>`;
+                }
+
                 tbody.innerHTML += `
                     <tr>
                         <td class="p-3.5 font-mono font-bold text-blue-600">${e.orderId}</td>
-                        <td class="p-3.5">${e.date}</td>
+                        <td class="p-3.5">${e.date}${closedBadge}</td>
                         <td class="p-3.5 font-bold text-slate-800">${e.vendor}</td>
                         <td class="p-3.5">${e.vendorRate}</td>
                         <td class="p-3.5">${e.location}</td>
@@ -2965,7 +3348,7 @@
                         <td class="p-3.5">${e.deliveryCharge}</td>
                         <td class="p-3.5 font-bold text-emerald-600">${e.profit}</td>
                         <td class="p-3.5 font-medium">${e.deliveryBoy}</td>
-                        <td class="p-3.5">C:${e.cash} / U:${e.upi}</td>
+                        <td class="p-3.5">${pmBadge}</td>
                         <td class="p-3.5">${statusBadge}</td>
                         <td class="p-3.5">${e.remarks || ''}</td>
                         <td class="p-3.5 text-right space-x-1">${actionsHtml}</td>
@@ -2974,13 +3357,195 @@
             });
         }
 
-        function applyAdvancedSearch() {
-            const text = document.getElementById('advSearchText').value.toLowerCase();
-            const vendor = document.getElementById('advSearchVendor').value;
-            const boy = document.getElementById('advSearchBoy').value;
-            const status = document.getElementById('advSearchStatus').value;
+        let currentPmModalTotalAmt = 0;
 
-            const filtered = db.entries.filter(e => {
+        window.openPaymentModeModal = function(id) {
+            const role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
+            if (role === 'Viewer') {
+                alert('Viewer role cannot modify payment mode.');
+                return;
+            }
+            if (!id) return;
+            const strId = String(id).trim();
+            const entry = (db.entries || []).find(x => 
+                String(x.id).trim() === strId || 
+                String(x.orderId).trim() === strId
+            );
+            if (!entry) {
+                console.error("Order not found for Payment Mode Modal ID:", id);
+                return;
+            }
+
+            document.getElementById('pmModalEntryId').value = entry.id;
+            document.getElementById('pmModalOrderId').innerText = entry.orderId;
+
+            const c = Number(entry.cash || 0);
+            const u = Number(entry.upi || 0);
+            let totalAmt = c + u;
+            if (totalAmt <= 0) {
+                totalAmt = Number(entry.vendorRate || 0) + Number(entry.deliveryCharge || 0);
+            }
+            currentPmModalTotalAmt = totalAmt;
+            document.getElementById('pmModalTotalAmount').innerText = '₹' + totalAmt.toFixed(2);
+            if (document.getElementById('pmSplitTotalDisplay')) {
+                document.getElementById('pmSplitTotalDisplay').innerText = '₹' + totalAmt.toFixed(2);
+            }
+
+            const errDiv = document.getElementById('pmErrorMsg');
+            if (errDiv) { errDiv.innerText = ''; errDiv.classList.add('hidden'); }
+
+            const radios = document.getElementsByName('pmMode');
+            let initialMode = 'Cash';
+            if (c > 0 && u > 0) initialMode = 'Cash + UPI';
+            else if (c > 0) initialMode = 'Cash';
+            else if (u > 0) initialMode = 'UPI';
+
+            radios.forEach(r => {
+                r.checked = (r.value === initialMode);
+            });
+
+            document.getElementById('pmCashAmt').value = c > 0 ? c : (initialMode === 'Cash + UPI' ? (totalAmt / 2) : totalAmt);
+            document.getElementById('pmUpiAmt').value = u > 0 ? u : (initialMode === 'Cash + UPI' ? (totalAmt / 2) : 0);
+
+            window.togglePmModalMode();
+            document.getElementById('paymentModeModal').classList.remove('hidden');
+        };
+
+        window.closePaymentModeModal = function() {
+            document.getElementById('paymentModeModal').classList.add('hidden');
+        };
+
+        window.togglePmModalMode = function() {
+            const selected = Array.from(document.getElementsByName('pmMode')).find(r => r.checked);
+            const splitSection = document.getElementById('pmSplitSection');
+            if (selected && selected.value === 'Cash + UPI') {
+                splitSection.classList.remove('hidden');
+                window.autoCalcPmUpiAmt();
+            } else {
+                splitSection.classList.add('hidden');
+            }
+        };
+
+        window.autoCalcPmUpiAmt = function() {
+            const selected = Array.from(document.getElementsByName('pmMode')).find(r => r.checked);
+            if (!selected || selected.value !== 'Cash + UPI') return;
+            const cashVal = Number(document.getElementById('pmCashAmt').value || 0);
+            const upiVal = Math.max(0, currentPmModalTotalAmt - cashVal);
+            document.getElementById('pmUpiAmt').value = upiVal > 0 ? upiVal : 0;
+        };
+
+        window.savePaymentModeChange = async function() {
+            const saveBtn = document.getElementById('pmSaveBtn');
+            if (saveBtn && saveBtn.disabled) return;
+
+            const id = document.getElementById('pmModalEntryId').value;
+            const strId = String(id).trim();
+            const entry = (db.entries || []).find(x => 
+                String(x.id).trim() === strId || 
+                String(x.orderId).trim() === strId
+            );
+            if (!entry) return;
+
+            const selected = Array.from(document.getElementsByName('pmMode')).find(r => r.checked);
+            if (!selected) return;
+
+            const mode = selected.value;
+            const totalAmt = currentPmModalTotalAmt;
+            const errDiv = document.getElementById('pmErrorMsg');
+            if (errDiv) { errDiv.innerText = ''; errDiv.classList.add('hidden'); }
+
+            let finalCash = 0;
+            let finalUpi = 0;
+
+            if (mode === 'Cash') {
+                finalCash = totalAmt;
+                finalUpi = 0;
+            } else if (mode === 'UPI') {
+                finalCash = 0;
+                finalUpi = totalAmt;
+            } else if (mode === 'Cash + UPI') {
+                finalCash = Number(document.getElementById('pmCashAmt').value || 0);
+                finalUpi = Number(document.getElementById('pmUpiAmt').value || 0);
+                const sum = finalCash + finalUpi;
+                if (Math.abs(sum - totalAmt) > 0.01) {
+                    if (errDiv) {
+                        errDiv.innerText = `Cash Amount (₹${finalCash.toFixed(2)}) + UPI Amount (₹${finalUpi.toFixed(2)}) must equal Total Amount (₹${totalAmt.toFixed(2)}).`;
+                        errDiv.classList.remove('hidden');
+                    }
+                    return;
+                }
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerText = 'Saving...';
+            }
+
+            try {
+                entry.cash = finalCash;
+                entry.upi = finalUpi;
+                entry.paymentMode = mode;
+
+                entry.timeline = entry.timeline || [];
+                entry.timeline.push({
+                    action: `Payment Mode Updated to ${mode} (Cash: ₹${finalCash}, UPI: ₹${finalUpi})`,
+                    user: currentUser || 'Admin',
+                    time: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString()
+                });
+
+                logAudit('Payment Mode Updated', `Order ID: ${entry.orderId} | Mode: ${mode} | Cash: ₹${finalCash} | UPI: ₹${finalUpi}`);
+
+                // Optimistic immediate UI update (0ms perceived delay)
+                window.closePaymentModeModal();
+                applyAdvancedSearch();
+                loadDashboard();
+
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = 'Save';
+                }
+
+                // Asynchronous background persistence with error recovery
+                saveDB().catch(err => {
+                    console.error('Background payment mode save failed:', err);
+                    alert(`Warning: Background save failed for order ${entry.orderId}. Please check network or try again.`);
+                    fetchState().then(() => {
+                        applyAdvancedSearch();
+                        loadDashboard();
+                    });
+                });
+            } catch (err) {
+                if (errDiv) {
+                    errDiv.innerText = 'Failed to update payment mode. Please try again.';
+                    errDiv.classList.remove('hidden');
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = 'Save';
+                }
+            }
+        };
+
+        function applyAdvancedSearch() {
+            const textEl = document.getElementById('advSearchText');
+            const text = textEl ? textEl.value.toLowerCase() : '';
+            const vendorEl = document.getElementById('advSearchVendor');
+            const vendor = vendorEl ? vendorEl.value : '';
+            const boyEl = document.getElementById('advSearchBoy');
+            const boy = boyEl ? boyEl.value : '';
+            const statusEl = document.getElementById('advSearchStatus');
+            const status = statusEl ? statusEl.value : '';
+            const scopeEl = document.getElementById('advSearchScope');
+            const scope = scopeEl ? scopeEl.value : 'active';
+            const dateEl = document.getElementById('advSearchDate');
+            const targetDate = dateEl ? dateEl.value : '';
+
+            const filtered = (db.entries || []).filter(e => {
+                const isClosed = isOrderClosed(e);
+                if (scope === 'active' && isClosed) return false;
+                if (scope === 'closed' && !isClosed) return false;
+                if (targetDate && !matchOrderDate(e.date, targetDate)) return false;
+
                 const matchText = !text || Object.values(e).some(val => String(val).toLowerCase().includes(text));
                 const matchVendor = !vendor || e.vendor === vendor;
                 const matchBoy = !boy || e.deliveryBoy === boy;
@@ -3374,13 +3939,37 @@
             });
         }
 
-        function deleteRestaurant(id) {
-            requestSecurityCheck(() => {
+        async function deleteRestaurant(id) {
+            requestSecurityCheck(async () => {
                 const r = db.restaurants.find(x => x.id === id);
-                db.restaurants = db.restaurants.filter(x => x.id !== id);
-                logAudit('Restaurant Deleted', `Name: ${r ? r.name : id}`);
-                saveDB();
-                loadRestaurants();
+
+                try {
+                    const res = await fetch(`/api/restaurants/${encodeURIComponent(id)}`, {
+                        method: "DELETE"
+                    });
+
+                    if (!res.ok) {
+                        let msg = `Delete failed (${res.status})`;
+                        try {
+                            const err = await res.json();
+                            if (err.error) msg = err.error;
+                        } catch {}
+                        throw new Error(msg);
+                   }
+
+                   db.restaurants = db.restaurants.filter(x => x.id !== id);
+
+                   logAudit("Restaurant Deleted", `Name: ${r ? r.name : id}`);
+
+                   await saveDB();
+
+                   loadRestaurants();
+
+                   alert("Restaurant deleted successfully.");
+                } catch (err) {
+                   console.error(err);
+                   alert("Failed to delete restaurant: " + err.message);
+                }
             });
         }
 
@@ -3758,9 +4347,20 @@
         }
 
         // Rider Settlement Page
+        // Rider Settlement Page
+        function isSettlementClosed(s) {
+            if (!s) return false;
+            if (s.status === 'Paid') return true;
+            if (Boolean(s.isClosed)) return true;
+            const checkDate = s.date || s.to || s.from;
+            if (!checkDate) return false;
+            if (isDayAlreadyClosed(checkDate)) return true;
+            return isHistoricalDate(checkDate);
+        }
+
         function initRiderSettlementTab() {
             populateDropdowns();
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getOperationalDateStr();
             document.getElementById('settleFrom').value = todayStr;
             document.getElementById('settleTo').value = todayStr;
             document.getElementById('settleDate').value = todayStr;
@@ -3785,7 +4385,7 @@
 
             if (!rider || !from || !to) return;
 
-            const filtered = db.entries.filter(e => e.deliveryBoy === rider && !e.isSettled && e.date >= from && e.date <= to);
+            const filtered = db.entries.filter(e => e.deliveryBoy === rider && !e.isSettled && !isOrderClosed(e) && e.date >= from && e.date <= to);
             const orders = filtered.length;
             const earnings = filtered.reduce((acc, curr) => acc + Number(curr.deliveryCharge || 0), 0);
 
@@ -3818,7 +4418,7 @@
                     return;
                 }
 
-                const filtered = db.entries.filter(e => e.deliveryBoy === rider && !e.isSettled && e.date >= from && e.date <= to);
+                const filtered = db.entries.filter(e => e.deliveryBoy === rider && !e.isSettled && !isOrderClosed(e) && e.date >= from && e.date <= to);
                 if (filtered.length === 0) {
                     alert('No unsettled orders found for this rider in the selected date range.');
                     return;
@@ -3856,14 +4456,25 @@
 
         function loadSettlements() {
             const tbody = document.getElementById('settlementTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
             const role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
 
-            if (db.riderSettlements.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No settlements recorded</td></tr>`;
+            const scopeEl = document.getElementById('riderSettleScope');
+            const scope = scopeEl ? scopeEl.value : 'active';
+
+            const data = (db.riderSettlements || []).filter(s => {
+                const closed = isSettlementClosed(s);
+                if (scope === 'active') return !closed;
+                if (scope === 'closed') return closed;
+                return true;
+            });
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No settlements found for selected view scope</td></tr>`;
                 return;
             }
-            db.riderSettlements.forEach(s => {
+            data.forEach(s => {
                 let actionsHtml = '';
                 if (role !== 'Operator' && role !== 'Viewer') {
                     actionsHtml = `
@@ -3876,9 +4487,11 @@
                     <button onclick="printRiderReceipt('${s.id}')" class="text-slate-400 hover:text-slate-700 p-1" title="Print"><i class="fa-solid fa-print"></i></button>
                 `;
 
+                const closedBadge = isSettlementClosed(s) ? `<span class="ml-1 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200" title="Archived Historical Settlement">Closed</span>` : '';
+
                 tbody.innerHTML += `
                     <tr>
-                        <td class="p-3.5">${s.date}</td>
+                        <td class="p-3.5">${s.date}${closedBadge}</td>
                         <td class="p-3.5 font-bold text-slate-800">${s.rider}</td>
                         <td class="p-3.5">${s.orders}</td>
                         <td class="p-3.5 font-bold text-emerald-600">${s.netPayable}</td>
@@ -4066,54 +4679,797 @@
         // ====================================================
         // ADVANCED REPORTS MODULE
         // ====================================================
-        function initReports() { generateReport(); }
-        function generateReport() {
-            const type = document.getElementById('reportType').value;
-            const content = document.getElementById('reportContent');
-            
-            if (type === 'restaurant') {
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base">Restaurant Report</h4><p class="text-xs text-slate-500">Total restaurants registered: ${db.restaurants.length}</p>` +
-                    `<div class="mt-4 overflow-x-auto"><table class="w-full text-left border-collapse text-xs erp-table"><thead><tr class="bg-slate-50 border-b"><th class="p-3">Name</th><th class="p-3">Contact Person</th><th class="p-3">Mobile</th><th class="p-3">Timings</th><th class="p-3">Status</th></tr></thead><tbody>` +
-                    db.restaurants.map(r => `<tr><td class="p-3 font-bold text-slate-800">${r.name}</td><td class="p-3">${r.contactPerson}</td><td class="p-3">${r.mobile}</td><td class="p-3">${formatTimeRange(r.openTime, r.closeTime)}</td><td class="p-3">${r.status}</td></tr>`).join('') +
-                    `</tbody></table></div>`;
-            } else if (type === 'restaurantSettlement') {
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base">Restaurant Settlement Report</h4><p class="text-xs text-slate-500">Total settlements recorded: ${db.restaurantSettlements.length}</p>` +
-                    `<div class="mt-4 overflow-x-auto"><table class="w-full text-left border-collapse text-xs erp-table"><thead><tr class="bg-slate-50 border-b"><th class="p-3">Date</th><th class="p-3">Restaurant</th><th class="p-3">Orders</th><th class="p-3">Paid Amount</th><th class="p-3">Outstanding</th><th class="p-3">Status</th></tr></thead><tbody>` +
-                    db.restaurantSettlements.map(s => `<tr><td class="p-3">${s.date}</td><td class="p-3 font-bold text-slate-800">${s.vendor}</td><td class="p-3">${s.orders}</td><td class="p-3 font-bold text-emerald-600">₹${Number(s.paidAmount).toFixed(2)}</td><td class="p-3 font-bold text-amber-600">${s.outstandingAmount}</td><td class="p-3">${s.status}</td></tr>`).join('') +
-                    `</tbody></table></div>`;
-            } else if (type === 'rider') {
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base">Rider Report</h4><p class="text-xs text-slate-500">Total delivery boys: ${db.deliveryBoys.length}</p>` +
-                    `<div class="mt-4 overflow-x-auto"><table class="w-full text-left border-collapse text-xs erp-table"><thead><tr class="bg-slate-50 border-b"><th class="p-3">Rider Name</th></tr></thead><tbody>` +
-                    db.deliveryBoys.map(d => `<tr><td class="p-3 font-bold text-slate-800">${d.name}</td></tr>`).join('') +
-                    `</tbody></table></div>`;
-            } else if (type === 'profit') {
-                let gross = db.entries.reduce((sum, e) => sum + Number(e.profit || 0), 0);
-                let exp = db.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-                let net = gross - exp;
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base">Profit Report</h4><p class="text-xs text-slate-500">Financial Summary</p>` +
-                    `<div class="mt-4 space-y-2 text-xs">` +
-                    `<div class="flex justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="font-semibold text-slate-600">Gross Profit:</span><span class="font-bold text-emerald-600 text-sm">₹${gross.toFixed(2)}</span></div>` +
-                    `<div class="flex justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="font-semibold text-slate-600">Total Expenses:</span><span class="font-bold text-rose-600 text-sm">₹${exp.toFixed(2)}</span></div>` +
-                    `<div class="flex justify-between p-3 bg-blue-50 rounded-xl border border-blue-100 font-bold text-sm"><span>Net Profit:</span><span class="text-blue-600">₹${net.toFixed(2)}</span></div>` +
-                    `</div>`;
-            } else if (type === 'expense') {
-                let expTotal = db.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base">Expense Report</h4><p class="text-xs text-slate-500">Total Expenses: ₹${expTotal.toFixed(2)}</p>` +
-                    `<div class="mt-4 overflow-x-auto"><table class="w-full text-left border-collapse text-xs erp-table"><thead><tr class="bg-slate-50 border-b"><th class="p-3">ID</th><th class="p-3">Date</th><th class="p-3">Category</th><th class="p-3">Name</th><th class="p-3">Amount</th></tr></thead><tbody>` +
-                    db.expenses.map(ex => `<tr><td class="p-3 font-mono">${ex.expenseId}</td><td class="p-3">${ex.date}</td><td class="p-3">${ex.category}</td><td class="p-3 font-bold text-slate-800">${ex.expenseName}</td><td class="p-3 font-bold text-rose-600">₹${ex.amount}</td></tr>`).join('') +
-                    `</tbody></table></div>`;
-            } else if (type === 'order') {
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base">Order Report</h4><p class="text-xs text-slate-500">Total orders: ${db.entries.length}</p>` +
-                    `<div class="mt-4 overflow-x-auto"><table class="w-full text-left border-collapse text-xs erp-table"><thead><tr class="bg-slate-50 border-b"><th class="p-3">Order ID</th><th class="p-3">Date</th><th class="p-3">Customer</th><th class="p-3">Restaurant</th><th class="p-3">Profit</th></tr></thead><tbody>` +
-                    db.entries.map(e => `<tr><td class="p-3 font-mono">${e.orderId}</td><td class="p-3">${e.date}</td><td class="p-3">${e.customerName}</td><td class="p-3 font-bold text-slate-800">${e.vendor}</td><td class="p-3 font-bold text-emerald-600">₹${e.profit}</td></tr>`).join('') +
-                    `</tbody></table></div>`;
+        let currentReportExportData = null;
+
+        function normalizeDateStr(dateStr) {
+            if (!dateStr) return '';
+            let str = String(dateStr).trim();
+            if (str.includes('T')) str = str.split('T')[0];
+            if (str.includes(' ')) str = str.split(' ')[0];
+
+            str = str.replace(/\./g, '-').replace(/\//g, '-');
+            const parts = str.split('-').filter(p => p.length > 0);
+            if (parts.length !== 3) return str;
+
+            let year = '';
+            let month = '';
+            let day = '';
+
+            if (parts[0].length === 4) {
+                year = parts[0];
+                month = parts[1].padStart(2, '0');
+                day = parts[2].padStart(2, '0');
+            } else if (parts[2].length === 4) {
+                day = parts[0].padStart(2, '0');
+                month = parts[1].padStart(2, '0');
+                year = parts[2];
+            } else if (parts[2].length === 2) {
+                day = parts[0].padStart(2, '0');
+                month = parts[1].padStart(2, '0');
+                year = '20' + parts[2];
+            } else if (parts[0].length === 2 && parts[2].length === 2) {
+                year = '20' + parts[0];
+                month = parts[1].padStart(2, '0');
+                day = parts[2].padStart(2, '0');
             } else {
-                content.innerHTML = `<h4 class="font-bold text-slate-800 text-base capitalize">${type} Report Generated Successfully</h4><p class="text-xs text-slate-500">Total entries analyzed: ${db.entries.length}</p>` +
-                    `<div class="mt-4"><h5 class="font-bold text-slate-700 mb-2">Restaurant Timings Included</h5>` +
-                    `<div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs erp-table"><thead><tr class="bg-slate-50 border-b"><th class="p-3">Restaurant Name</th><th class="p-3">Timings</th></tr></thead><tbody>` +
-                    db.restaurants.map(r => `<tr><td class="p-3 font-bold text-slate-800">${r.name}</td><td class="p-3">${formatTimeRange(r.openTime, r.closeTime)}</td></tr>`).join('') +
-                    `</tbody></table></div></div>`;
+                return str;
             }
+
+            return `${year}-${month}-${day}`;
+        }
+
+        function getEntryPaymentMode(e) {
+            const c = Number(e.cash || 0);
+            const u = Number(e.upi || 0);
+            if (c > 0 && u > 0) return 'Cash+UPI';
+            if (c > 0) return 'Cash';
+            if (u > 0) return 'UPI';
+            if (e.paymentMode) return e.paymentMode;
+            return 'Online';
+        }
+
+        function initReports() {
+            const restSelect = document.getElementById('reportRestaurant');
+            if (restSelect) {
+                const currentVal = restSelect.value;
+                restSelect.innerHTML = '<option value="">All Restaurants</option>' +
+                    (db.restaurants || []).map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+                restSelect.value = currentVal;
+            }
+
+            const riderSelect = document.getElementById('reportRider');
+            if (riderSelect) {
+                const currentVal = riderSelect.value;
+                riderSelect.innerHTML = '<option value="">All Riders</option>' +
+                    (db.deliveryBoys || []).map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+                riderSelect.value = currentVal;
+            }
+
+            const fromInput = document.getElementById('reportFromDate');
+            const toInput = document.getElementById('reportToDate');
+            const today = new Date().toISOString().split('T')[0];
+            if (fromInput && !fromInput.value) {
+                fromInput.value = today;
+            }
+            if (toInput && !toInput.value) {
+                toInput.value = today;
+            }
+
+            generateReport();
+        }
+
+        function resetReportFilters() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('reportFromDate').value = today;
+            document.getElementById('reportToDate').value = today;
+            document.getElementById('reportRestaurant').value = '';
+            document.getElementById('reportRider').value = '';
+            document.getElementById('reportPaymentMode').value = '';
+            document.getElementById('reportType').value = 'daily';
+            generateReport();
+        }
+
+        function getFilteredReportData() {
+            const type = document.getElementById('reportType').value;
+            let fromDate = document.getElementById('reportFromDate').value;
+            let toDate = document.getElementById('reportToDate').value;
+            const restaurant = document.getElementById('reportRestaurant').value;
+            const rider = document.getElementById('reportRider').value;
+            const paymentMode = document.getElementById('reportPaymentMode').value;
+
+            const todayObj = new Date();
+            const todayStr = todayObj.toISOString().split('T')[0];
+
+            if (type === 'daily') {
+                if (!fromDate) fromDate = todayStr;
+                toDate = fromDate;
+            } else if (type === 'weekly') {
+                if (!fromDate) {
+                    const d = new Date();
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                    const monday = new Date(d.setDate(diff));
+                    fromDate = monday.toISOString().split('T')[0];
+                    toDate = todayStr;
+                }
+            } else if (type === 'monthly') {
+                if (!fromDate) {
+                    const y = todayObj.getFullYear();
+                    const m = String(todayObj.getMonth() + 1).padStart(2, '0');
+                    fromDate = `${y}-${m}-01`;
+                    const lastDay = new Date(y, todayObj.getMonth() + 1, 0).getDate();
+                    toDate = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+                }
+            }
+
+            const filteredEntries = (db.entries || []).filter(e => {
+                const eDate = normalizeDateStr(e.date);
+                if (fromDate && eDate && eDate < fromDate) return false;
+                if (toDate && eDate && eDate > toDate) return false;
+                if (restaurant && e.vendor !== restaurant) return false;
+                if (rider && e.deliveryBoy !== rider) return false;
+                if (paymentMode) {
+                    const pMode = getEntryPaymentMode(e);
+                    if (pMode !== paymentMode) return false;
+                }
+                return true;
+            });
+
+            const filteredExpenses = (db.expenses || []).filter(ex => {
+                const exDate = normalizeDateStr(ex.date);
+                if (fromDate && exDate && exDate < fromDate) return false;
+                if (toDate && exDate && exDate > toDate) return false;
+                if (paymentMode && ex.paymentMode !== paymentMode) return false;
+                return true;
+            });
+
+            return { type, fromDate, toDate, restaurant, rider, paymentMode, filteredEntries, filteredExpenses };
+        }
+
+        function generateReport() {
+            const content = document.getElementById('reportContent');
+            if (!content) return;
+
+            const { type, fromDate, toDate, restaurant, rider, paymentMode, filteredEntries, filteredExpenses } = getFilteredReportData();
+
+            const totalOrders = filteredEntries.length;
+            const foodSales = filteredEntries.reduce((sum, e) => sum + Number(e.vendorRate || 0), 0);
+            const deliveryCharges = filteredEntries.reduce((sum, e) => sum + Number(e.deliveryCharge || 0), 0);
+            const totalCollection = filteredEntries.reduce((sum, e) => {
+                const c = Number(e.cash || 0);
+                const u = Number(e.upi || 0);
+                return sum + (c + u > 0 ? (c + u) : (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0)));
+            }, 0);
+            const naavTransferred = filteredEntries.reduce((sum, e) => sum + Number(e.naavTransferred || 0), 0);
+            const totalExpenses = filteredExpenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
+            const grossProfit = filteredEntries.reduce((sum, e) => sum + Number(e.profit || 0), 0);
+            const netProfit = grossProfit - totalExpenses;
+
+            const summaryCardsHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Orders</span>
+                        <span class="text-base font-extrabold text-slate-800">${totalOrders}</span>
+                    </div>
+                    <div class="bg-blue-50/60 border border-blue-100 rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold text-blue-600 uppercase tracking-wider">Food Sales</span>
+                        <span class="text-base font-extrabold text-blue-700">₹${foodSales.toFixed(2)}</span>
+                    </div>
+                    <div class="bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Delivery Charges</span>
+                        <span class="text-base font-extrabold text-emerald-700">₹${deliveryCharges.toFixed(2)}</span>
+                    </div>
+                    <div class="bg-amber-50/60 border border-amber-100 rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold text-amber-600 uppercase tracking-wider">Total Collection</span>
+                        <span class="text-base font-extrabold text-amber-700">₹${totalCollection.toFixed(2)}</span>
+                    </div>
+                    <div class="bg-purple-50/60 border border-purple-100 rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold text-purple-600 uppercase tracking-wider">NAAV Transferred</span>
+                        <span class="text-base font-extrabold text-purple-700">₹${naavTransferred.toFixed(2)}</span>
+                    </div>
+                    <div class="bg-rose-50/60 border border-rose-100 rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold text-rose-600 uppercase tracking-wider">Expenses</span>
+                        <span class="text-base font-extrabold text-rose-700">₹${totalExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="${netProfit >= 0 ? 'bg-indigo-50/60 border border-indigo-100 text-indigo-700' : 'bg-rose-100 border border-rose-200 text-rose-800'} rounded-xl p-3 text-center">
+                        <span class="block text-[10px] font-bold uppercase tracking-wider">Net Profit</span>
+                        <span class="text-base font-extrabold">₹${netProfit.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+
+            let tableHTML = '';
+            let exportHeaders = [];
+            let exportRows = [];
+            let exportGrandTotal = [];
+            let reportTitle = '';
+
+            const formatRangeText = `${fromDate || 'Beginning'} to ${toDate || 'Present'}`;
+
+            if (['daily', 'weekly', 'monthly', 'customDate', 'order'].includes(type)) {
+                const titleMap = {
+                    daily: 'Daily Report',
+                    weekly: 'Weekly Report',
+                    monthly: 'Monthly Report',
+                    customDate: 'Custom Date Report',
+                    order: 'Orders Report'
+                };
+                reportTitle = titleMap[type] || 'Orders Report';
+                exportHeaders = ['Date', 'Order ID', 'Customer', 'Restaurant', 'Rider', 'Food Amount (₹)', 'Delivery Charge (₹)', 'Total Amount (₹)', 'Payment Mode', 'NAAV Transferred (₹)', 'Status'];
+
+                let sumFood = 0, sumDel = 0, sumTotal = 0, sumNaav = 0;
+
+                const rowsHTML = filteredEntries.map(e => {
+                    const food = Number(e.vendorRate || 0);
+                    const del = Number(e.deliveryCharge || 0);
+                    const c = Number(e.cash || 0);
+                    const u = Number(e.upi || 0);
+                    const tot = (c + u > 0) ? (c + u) : (food + del);
+                    const naav = Number(e.naavTransferred || 0);
+                    const pMode = getEntryPaymentMode(e);
+
+                    sumFood += food;
+                    sumDel += del;
+                    sumTotal += tot;
+                    sumNaav += naav;
+
+                    exportRows.push([
+                        e.date || '-',
+                        e.orderId || '-',
+                        e.customerName || '-',
+                        e.vendor || '-',
+                        e.deliveryBoy || '-',
+                        food.toFixed(2),
+                        del.toFixed(2),
+                        tot.toFixed(2),
+                        pMode,
+                        naav.toFixed(2),
+                        e.orderStatus || 'Pending'
+                    ]);
+
+                    return `
+                        <tr>
+                            <td class="p-2.5">${e.date || '-'}</td>
+                            <td class="p-2.5 font-mono text-slate-700">${e.orderId || '-'}</td>
+                            <td class="p-2.5">${e.customerName || '-'}<br><span class="text-[10px] text-slate-400">${e.customerMobile || ''}</span></td>
+                            <td class="p-2.5 font-semibold text-slate-800">${e.vendor || '-'}</td>
+                            <td class="p-2.5">${e.deliveryBoy || '-'}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${food.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${del.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-slate-900">₹${tot.toFixed(2)}</td>
+                            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">${pMode}</span></td>
+                            <td class="p-2.5 text-right font-semibold text-purple-600">₹${naav.toFixed(2)}</td>
+                            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.orderStatus === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">${e.orderStatus || 'Pending'}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                exportGrandTotal = [
+                    'GRAND TOTAL',
+                    `Orders: ${filteredEntries.length}`,
+                    '', '', '',
+                    sumFood.toFixed(2),
+                    sumDel.toFixed(2),
+                    sumTotal.toFixed(2),
+                    '',
+                    sumNaav.toFixed(2),
+                    ''
+                ];
+
+                tableHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs erp-table">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                    <th class="p-2.5">Date</th>
+                                    <th class="p-2.5">Order ID</th>
+                                    <th class="p-2.5">Customer</th>
+                                    <th class="p-2.5">Restaurant</th>
+                                    <th class="p-2.5">Rider</th>
+                                    <th class="p-2.5 text-right">Food Amount</th>
+                                    <th class="p-2.5 text-right">Delivery Charge</th>
+                                    <th class="p-2.5 text-right">Total Amount</th>
+                                    <th class="p-2.5 text-center">Payment Mode</th>
+                                    <th class="p-2.5 text-right">NAAV Transferred</th>
+                                    <th class="p-2.5 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHTML || '<tr><td colspan="11" class="p-4 text-center text-slate-400">No orders match the selected filters.</td></tr>'}
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-800 text-white font-bold text-xs">
+                                    <td class="p-3">GRAND TOTAL</td>
+                                    <td class="p-3 font-mono">${filteredEntries.length} Orders</td>
+                                    <td class="p-3" colspan="3"></td>
+                                    <td class="p-3 text-right">₹${sumFood.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumDel.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumTotal.toFixed(2)}</td>
+                                    <td class="p-3"></td>
+                                    <td class="p-3 text-right text-purple-300">₹${sumNaav.toFixed(2)}</td>
+                                    <td class="p-3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            } else if (type === 'restaurant') {
+                reportTitle = 'Restaurant Report';
+                exportHeaders = ['Restaurant', 'Orders', 'Food Sales (₹)', 'Delivery Charges (₹)', 'NAAV Transferred (₹)', 'Restaurant Payable (₹)', 'Paid Amount (₹)', 'Pending Amount (₹)'];
+
+                let totalRRestOrders = 0, sumRFood = 0, sumRDel = 0, sumRNaav = 0, sumRPayable = 0, sumRPaid = 0, sumRPending = 0;
+
+                const restList = restaurant ? (db.restaurants || []).filter(r => r.name === restaurant) : (db.restaurants || []);
+
+                const rowsHTML = restList.map(r => {
+                    const rOrders = filteredEntries.filter(e => e.vendor === r.name);
+                    const rOrderCount = rOrders.length;
+                    const rFood = rOrders.reduce((sum, e) => sum + Number(e.vendorRate || 0), 0);
+                    const rDel = rOrders.reduce((sum, e) => sum + Number(e.deliveryCharge || 0), 0);
+                    const rNaav = rOrders.reduce((sum, e) => sum + Number(e.naavTransferred || 0), 0);
+                    const rPayable = rFood;
+
+                    const settlements = (db.restaurantSettlements || []).filter(s => s.vendor === r.name);
+                    const rPaid = settlements.reduce((sum, s) => sum + Number(s.paidAmount || 0), 0);
+                    const rPending = Math.max(0, rPayable - rPaid);
+
+                    totalRRestOrders += rOrderCount;
+                    sumRFood += rFood;
+                    sumRDel += rDel;
+                    sumRNaav += rNaav;
+                    sumRPayable += rPayable;
+                    sumRPaid += rPaid;
+                    sumRPending += rPending;
+
+                    exportRows.push([
+                        r.name,
+                        rOrderCount,
+                        rFood.toFixed(2),
+                        rDel.toFixed(2),
+                        rNaav.toFixed(2),
+                        rPayable.toFixed(2),
+                        rPaid.toFixed(2),
+                        rPending.toFixed(2)
+                    ]);
+
+                    return `
+                        <tr>
+                            <td class="p-2.5 font-bold text-slate-800">${r.name}</td>
+                            <td class="p-2.5 text-center font-semibold text-slate-700">${rOrderCount}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${rFood.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${rDel.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-purple-600">₹${rNaav.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-semibold text-blue-600">₹${rPayable.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-semibold text-emerald-600">₹${rPaid.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-amber-600">₹${rPending.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                exportGrandTotal = [
+                    'GRAND TOTAL',
+                    totalRRestOrders,
+                    sumRFood.toFixed(2),
+                    sumRDel.toFixed(2),
+                    sumRNaav.toFixed(2),
+                    sumRPayable.toFixed(2),
+                    sumRPaid.toFixed(2),
+                    sumRPending.toFixed(2)
+                ];
+
+                tableHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs erp-table">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                    <th class="p-2.5">Restaurant</th>
+                                    <th class="p-2.5 text-center">Orders</th>
+                                    <th class="p-2.5 text-right">Food Sales</th>
+                                    <th class="p-2.5 text-right">Delivery Charges</th>
+                                    <th class="p-2.5 text-right">NAAV Transferred</th>
+                                    <th class="p-2.5 text-right">Restaurant Payable</th>
+                                    <th class="p-2.5 text-right">Paid Amount</th>
+                                    <th class="p-2.5 text-right">Pending Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHTML || '<tr><td colspan="8" class="p-4 text-center text-slate-400">No restaurants registered.</td></tr>'}
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-800 text-white font-bold text-xs">
+                                    <td class="p-3">GRAND TOTAL</td>
+                                    <td class="p-3 text-center">${totalRRestOrders}</td>
+                                    <td class="p-3 text-right">₹${sumRFood.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumRDel.toFixed(2)}</td>
+                                    <td class="p-3 text-right text-purple-300">₹${sumRNaav.toFixed(2)}</td>
+                                    <td class="p-3 text-right text-blue-300">₹${sumRPayable.toFixed(2)}</td>
+                                    <td class="p-3 text-right text-emerald-300">₹${sumRPaid.toFixed(2)}</td>
+                                    <td class="p-3 text-right text-amber-300">₹${sumRPending.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            } else if (type === 'rider') {
+                reportTitle = 'Rider Report';
+                exportHeaders = ['Rider', 'Orders', 'Delivery Earnings (₹)', 'Cash Collected (₹)', 'UPI Collected (₹)', 'Online / Other (₹)', 'Total Collected (₹)'];
+
+                let sumRiderOrders = 0, sumRiderEarnings = 0, sumRiderCash = 0, sumRiderUPI = 0, sumRiderOnline = 0, sumRiderTotal = 0;
+
+                const riderList = rider ? (db.deliveryBoys || []).filter(d => d.name === rider) : (db.deliveryBoys || []);
+
+                const rowsHTML = riderList.map(d => {
+                    const rOrders = filteredEntries.filter(e => e.deliveryBoy === d.name);
+                    const rCount = rOrders.length;
+                    const rEarnings = rOrders.reduce((sum, e) => sum + Number(e.deliveryCharge || 0), 0);
+                    const rCash = rOrders.reduce((sum, e) => sum + Number(e.cash || 0), 0);
+                    const rUPI = rOrders.reduce((sum, e) => sum + Number(e.upi || 0), 0);
+                    const rOnline = rOrders.reduce((sum, e) => {
+                        const pMode = getEntryPaymentMode(e);
+                        if (pMode === 'Online') {
+                            return sum + (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+                        }
+                        return sum;
+                    }, 0);
+                    const rTotal = rCash + rUPI + rOnline;
+
+                    sumRiderOrders += rCount;
+                    sumRiderEarnings += rEarnings;
+                    sumRiderCash += rCash;
+                    sumRiderUPI += rUPI;
+                    sumRiderOnline += rOnline;
+                    sumRiderTotal += rTotal;
+
+                    exportRows.push([
+                        d.name,
+                        rCount,
+                        rEarnings.toFixed(2),
+                        rCash.toFixed(2),
+                        rUPI.toFixed(2),
+                        rOnline.toFixed(2),
+                        rTotal.toFixed(2)
+                    ]);
+
+                    return `
+                        <tr>
+                            <td class="p-2.5 font-bold text-slate-800">${d.name}</td>
+                            <td class="p-2.5 text-center font-semibold text-slate-700">${rCount}</td>
+                            <td class="p-2.5 text-right font-medium text-emerald-600">₹${rEarnings.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${rCash.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${rUPI.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${rOnline.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-slate-900">₹${rTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                exportGrandTotal = [
+                    'GRAND TOTAL',
+                    sumRiderOrders,
+                    sumRiderEarnings.toFixed(2),
+                    sumRiderCash.toFixed(2),
+                    sumRiderUPI.toFixed(2),
+                    sumRiderOnline.toFixed(2),
+                    sumRiderTotal.toFixed(2)
+                ];
+
+                tableHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs erp-table">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                    <th class="p-2.5">Rider Name</th>
+                                    <th class="p-2.5 text-center">Orders</th>
+                                    <th class="p-2.5 text-right">Delivery Earnings</th>
+                                    <th class="p-2.5 text-right">Cash</th>
+                                    <th class="p-2.5 text-right">UPI</th>
+                                    <th class="p-2.5 text-right">Online / Other</th>
+                                    <th class="p-2.5 text-right">Total Collected</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHTML || '<tr><td colspan="7" class="p-4 text-center text-slate-400">No riders registered.</td></tr>'}
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-800 text-white font-bold text-xs">
+                                    <td class="p-3">GRAND TOTAL</td>
+                                    <td class="p-3 text-center">${sumRiderOrders}</td>
+                                    <td class="p-3 text-right text-emerald-300">₹${sumRiderEarnings.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumRiderCash.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumRiderUPI.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumRiderOnline.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumRiderTotal.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            } else if (type === 'expense') {
+                reportTitle = 'Expense Report';
+                exportHeaders = ['Date', 'Expense ID', 'Category', 'Expense Name', 'Amount (₹)', 'Payment Mode', 'Paid To', 'Remarks'];
+
+                let sumExpAmount = 0;
+
+                const rowsHTML = filteredExpenses.map(ex => {
+                    const amt = Number(ex.amount || 0);
+                    sumExpAmount += amt;
+
+                    exportRows.push([
+                        ex.date || '-',
+                        ex.expenseId || '-',
+                        ex.category || '-',
+                        ex.expenseName || '-',
+                        amt.toFixed(2),
+                        ex.paymentMode || '-',
+                        ex.paidTo || '-',
+                        ex.remarks || '-'
+                    ]);
+
+                    return `
+                        <tr>
+                            <td class="p-2.5">${ex.date || '-'}</td>
+                            <td class="p-2.5 font-mono text-slate-700">${ex.expenseId || '-'}</td>
+                            <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-100">${ex.category || '-'}</span></td>
+                            <td class="p-2.5 font-bold text-slate-800">${ex.expenseName || '-'}</td>
+                            <td class="p-2.5 text-right font-bold text-rose-600">₹${amt.toFixed(2)}</td>
+                            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">${ex.paymentMode || '-'}</span></td>
+                            <td class="p-2.5">${ex.paidTo || '-'}</td>
+                            <td class="p-2.5 text-slate-500">${ex.remarks || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                exportGrandTotal = [
+                    'TOTAL EXPENSES',
+                    `Items: ${filteredExpenses.length}`,
+                    '', '',
+                    sumExpAmount.toFixed(2),
+                    '', '', ''
+                ];
+
+                tableHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs erp-table">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                    <th class="p-2.5">Date</th>
+                                    <th class="p-2.5">Expense ID</th>
+                                    <th class="p-2.5">Category</th>
+                                    <th class="p-2.5">Expense Name</th>
+                                    <th class="p-2.5 text-right">Amount</th>
+                                    <th class="p-2.5 text-center">Payment Mode</th>
+                                    <th class="p-2.5">Paid To</th>
+                                    <th class="p-2.5">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHTML || '<tr><td colspan="8" class="p-4 text-center text-slate-400">No expenses recorded for this period.</td></tr>'}
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-800 text-white font-bold text-xs">
+                                    <td class="p-3">TOTAL EXPENSES</td>
+                                    <td class="p-3 font-mono">${filteredExpenses.length} Items</td>
+                                    <td class="p-3" colspan="2"></td>
+                                    <td class="p-3 text-right text-rose-300">₹${sumExpAmount.toFixed(2)}</td>
+                                    <td class="p-3" colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            } else if (type === 'profit') {
+                reportTitle = 'Profit Report';
+                exportHeaders = ['Date', 'Order ID', 'Restaurant', 'Food Sales (₹)', 'Delivery Charge (₹)', 'Gross Profit (₹)', 'Status'];
+
+                let sumProfitFood = 0, sumProfitDel = 0, sumProfitGross = 0;
+
+                const rowsHTML = filteredEntries.map(e => {
+                    const food = Number(e.vendorRate || 0);
+                    const del = Number(e.deliveryCharge || 0);
+                    const gProfit = Number(e.profit || 0);
+
+                    sumProfitFood += food;
+                    sumProfitDel += del;
+                    sumProfitGross += gProfit;
+
+                    exportRows.push([
+                        e.date || '-',
+                        e.orderId || '-',
+                        e.vendor || '-',
+                        food.toFixed(2),
+                        del.toFixed(2),
+                        gProfit.toFixed(2),
+                        e.orderStatus || 'Pending'
+                    ]);
+
+                    return `
+                        <tr>
+                            <td class="p-2.5">${e.date || '-'}</td>
+                            <td class="p-2.5 font-mono text-slate-700">${e.orderId || '-'}</td>
+                            <td class="p-2.5 font-semibold text-slate-800">${e.vendor || '-'}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${food.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${del.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-emerald-600">₹${gProfit.toFixed(2)}</td>
+                            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.orderStatus === 'Delivered' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">${e.orderStatus || 'Pending'}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                exportGrandTotal = [
+                    'TOTAL GROSS PROFIT',
+                    `Orders: ${filteredEntries.length}`,
+                    '',
+                    sumProfitFood.toFixed(2),
+                    sumProfitDel.toFixed(2),
+                    sumProfitGross.toFixed(2),
+                    ''
+                ];
+
+                tableHTML = `
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-500 uppercase">Gross Profit from Orders</span>
+                                <span class="text-lg font-bold text-emerald-600">₹${grossProfit.toFixed(2)}</span>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-500 uppercase">Total Period Expenses</span>
+                                <span class="text-lg font-bold text-rose-600">₹${totalExpenses.toFixed(2)}</span>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-semibold text-slate-500 uppercase">Net Business Profit</span>
+                                <span class="text-lg font-bold ${netProfit >= 0 ? 'text-indigo-600' : 'text-rose-700'}">₹${netProfit.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs erp-table">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                        <th class="p-2.5">Date</th>
+                                        <th class="p-2.5">Order ID</th>
+                                        <th class="p-2.5">Restaurant</th>
+                                        <th class="p-2.5 text-right">Food Sales</th>
+                                        <th class="p-2.5 text-right">Delivery Charge</th>
+                                        <th class="p-2.5 text-right">Gross Profit</th>
+                                        <th class="p-2.5 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${rowsHTML || '<tr><td colspan="7" class="p-4 text-center text-slate-400">No profit records available for this period.</td></tr>'}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-slate-800 text-white font-bold text-xs">
+                                        <td class="p-3">TOTAL GROSS PROFIT</td>
+                                        <td class="p-3 font-mono">${filteredEntries.length} Orders</td>
+                                        <td class="p-3"></td>
+                                        <td class="p-3 text-right">₹${sumProfitFood.toFixed(2)}</td>
+                                        <td class="p-3 text-right">₹${sumProfitDel.toFixed(2)}</td>
+                                        <td class="p-3 text-right text-emerald-300">₹${sumProfitGross.toFixed(2)}</td>
+                                        <td class="p-3"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'payment') {
+                reportTitle = 'Payment Report';
+                exportHeaders = ['Payment Mode', 'Order Count', 'Food Sales (₹)', 'Delivery Charges (₹)', 'Total Collected (₹)', 'NAAV Transferred (₹)'];
+
+                const paymentModesList = ['Cash', 'UPI', 'Cash+UPI', 'Online'];
+                let sumPayOrders = 0, sumPayFood = 0, sumPayDel = 0, sumPayTot = 0, sumPayNaav = 0;
+
+                const rowsHTML = paymentModesList.map(pm => {
+                    const pmOrders = filteredEntries.filter(e => getEntryPaymentMode(e) === pm);
+                    const count = pmOrders.length;
+                    const pFood = pmOrders.reduce((sum, e) => sum + Number(e.vendorRate || 0), 0);
+                    const pDel = pmOrders.reduce((sum, e) => sum + Number(e.deliveryCharge || 0), 0);
+                    const pTot = pmOrders.reduce((sum, e) => {
+                        const c = Number(e.cash || 0);
+                        const u = Number(e.upi || 0);
+                        return sum + (c + u > 0 ? (c + u) : (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0)));
+                    }, 0);
+                    const pNaav = pmOrders.reduce((sum, e) => sum + Number(e.naavTransferred || 0), 0);
+
+                    sumPayOrders += count;
+                    sumPayFood += pFood;
+                    sumPayDel += pDel;
+                    sumPayTot += pTot;
+                    sumPayNaav += pNaav;
+
+                    exportRows.push([
+                        pm,
+                        count,
+                        pFood.toFixed(2),
+                        pDel.toFixed(2),
+                        pTot.toFixed(2),
+                        pNaav.toFixed(2)
+                    ]);
+
+                    return `
+                        <tr>
+                            <td class="p-2.5 font-bold text-slate-800"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 border border-slate-200">${pm}</span></td>
+                            <td class="p-2.5 text-center font-bold text-slate-700">${count}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${pFood.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-medium text-slate-700">₹${pDel.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-amber-700">₹${pTot.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-purple-600">₹${pNaav.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                exportGrandTotal = [
+                    'GRAND TOTAL',
+                    sumPayOrders,
+                    sumPayFood.toFixed(2),
+                    sumPayDel.toFixed(2),
+                    sumPayTot.toFixed(2),
+                    sumPayNaav.toFixed(2)
+                ];
+
+                tableHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs erp-table">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                    <th class="p-2.5">Payment Mode</th>
+                                    <th class="p-2.5 text-center">Order Count</th>
+                                    <th class="p-2.5 text-right">Food Sales</th>
+                                    <th class="p-2.5 text-right">Delivery Charges</th>
+                                    <th class="p-2.5 text-right">Total Collection</th>
+                                    <th class="p-2.5 text-right">NAAV Transferred</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHTML}
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-800 text-white font-bold text-xs">
+                                    <td class="p-3">GRAND TOTAL</td>
+                                    <td class="p-3 text-center">${sumPayOrders}</td>
+                                    <td class="p-3 text-right">₹${sumPayFood.toFixed(2)}</td>
+                                    <td class="p-3 text-right">₹${sumPayDel.toFixed(2)}</td>
+                                    <td class="p-3 text-right text-amber-300">₹${sumPayTot.toFixed(2)}</td>
+                                    <td class="p-3 text-right text-purple-300">₹${sumPayNaav.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            }
+
+            currentReportExportData = {
+                title: reportTitle,
+                headers: exportHeaders,
+                rows: exportRows,
+                grandTotalRow: exportGrandTotal
+            };
+
+            content.innerHTML = `
+                <div class="border-b border-slate-200 pb-4 mb-4 flex flex-wrap justify-between items-end gap-2">
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-lg flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie text-blue-600"></i>
+                            <span>${reportTitle}</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">
+                            Period: <span class="font-bold text-slate-700">${formatRangeText}</span>
+                            ${restaurant ? ` | Restaurant: <span class="font-bold text-blue-600">${restaurant}</span>` : ''}
+                            ${rider ? ` | Rider: <span class="font-bold text-blue-600">${rider}</span>` : ''}
+                            ${paymentMode ? ` | Mode: <span class="font-bold text-blue-600">${paymentMode}</span>` : ''}
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-400 block">Generated On</span>
+                        <span class="text-xs font-mono font-semibold text-slate-600">${new Date().toLocaleString()}</span>
+                    </div>
+                </div>
+
+                ${summaryCardsHTML}
+
+                ${tableHTML}
+            `;
         }
 
         function loadRecycleBin() {
@@ -4214,17 +5570,7 @@ storageKB = '0.00';
             });
         }
 
-        function exportXLSX() {
-            if (db.entries.length === 0) return alert('No data');
-            const worksheet = XLSX.utils.json_to_sheet(db.entries);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Entries");
-            XLSX.writeFile(workbook, `NAAV_Accounts_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
 
-        function exportPDF() {
-            html2pdf().from(document.getElementById('reportPrintArea')).save(`NAAV_Accounts_${new Date().toISOString().split('T')[0]}.pdf`);
-        }
 
         function backupJSON() {
             const nowStr = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
@@ -4280,7 +5626,12 @@ storageKB = '0.00';
         }
 
         function isDayAlreadyClosed(dateStr) {
-            return db.dayCloseHistory.some(h => h.date === dateStr);
+            if (!dateStr) return false;
+            const normInput = typeof normalizeDateStr === 'function' ? normalizeDateStr(dateStr) : String(dateStr).trim();
+            return (db.dayCloseHistory || []).some(h => {
+                const normH = typeof normalizeDateStr === 'function' ? normalizeDateStr(h.date) : String(h.date).trim();
+                return normH === normInput;
+            });
         }
 
         function initDayCloseTab() {
@@ -4338,19 +5689,31 @@ storageKB = '0.00';
             const todayStr = getDayCloseTodayStr();
 
             if (isDayAlreadyClosed(todayStr)) {
-                alert('Day has already been closed for ' + todayStr + '. It cannot be closed again.');
+                alert('Day has already been closed for ' + todayStr + '.');
                 return;
             }
 
             const summary = computeDayCloseSummary(todayStr);
             const confirmClose = confirm(
-                `Close Day for ${todayStr}?\n\nOrders: ${summary.totalOrders}\nSales: ₹${summary.totalSales.toFixed(2)}\nProfit: ₹${summary.totalProfit.toFixed(2)}\nExpenses: ₹${summary.totalExpenses.toFixed(2)}\nNet Profit: ₹${summary.netProfit.toFixed(2)}\n\nThis only saves a snapshot. No orders or records will be deleted or modified.`
+                `Close Day for ${todayStr}?\n\nOrders: ${summary.totalOrders}\nSales: ₹${summary.totalSales.toFixed(2)}\nProfit: ₹${summary.totalProfit.toFixed(2)}\nExpenses: ₹${summary.totalExpenses.toFixed(2)}\nNet Profit: ₹${summary.netProfit.toFixed(2)}\n\nThis will archive the day's records. All historical records remain saved permanently in the database.`
             );
             if (!confirmClose) return;
 
             const nowStr = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
 
-            db.dayCloseHistory.push({
+            (db.entries || []).forEach(e => {
+                if (e.date === todayStr) {
+                    e.isClosed = true;
+                }
+            });
+            (db.expenses || []).forEach(ex => {
+                if (ex.date === todayStr) {
+                    ex.isClosed = true;
+                }
+            });
+
+            const existingIdx = (db.dayCloseHistory || []).findIndex(h => h.date === summary.date);
+            const snapshotRecord = {
                 date: summary.date,
                 totalOrders: summary.totalOrders,
                 totalSales: summary.totalSales,
@@ -4359,12 +5722,18 @@ storageKB = '0.00';
                 netProfit: summary.netProfit,
                 closedBy: currentUser || 'Admin',
                 closedAt: nowStr
-            });
+            };
+
+            if (existingIdx > -1) {
+                db.dayCloseHistory[existingIdx] = snapshotRecord;
+            } else {
+                db.dayCloseHistory.push(snapshotRecord);
+            }
 
             saveDB();
             logAudit('Day Close', `Date: ${summary.date} | Net Profit: ₹${summary.netProfit.toFixed(2)}`);
             initDayCloseTab();
-            alert('Day closed successfully for ' + todayStr + '.');
+            alert('Day closed and archived successfully for ' + todayStr + '. All historical data is preserved.');
         }
 
         function exportDayCloseXLSX() {
