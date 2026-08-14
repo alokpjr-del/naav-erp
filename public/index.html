@@ -68,6 +68,14 @@
             background-color: #eff6ff !important;
         }
 
+        @media (min-width: 1024px) {
+            #entryModal.calc-open-layout {
+                justify-content: flex-start !important;
+                padding-left: 2rem !important;
+                padding-right: 25rem !important;
+            }
+        }
+
         @media print {
             .no-print, header, aside, button, nav, #globalSearchInput, #globalSearchResults { display: none !important; }
             body { background: white !important; font-size: 10pt !important; color: #000000 !important; }
@@ -1794,9 +1802,9 @@
             </div>
         </main>
 
-        <!-- GLOBAL CALCULATOR DRAWER OVERLAY -->
-        <div id="calculatorDrawerBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] hidden transition-opacity duration-300" onclick="closeCalculatorDrawer()"></div>
-        <div id="calculatorDrawer" class="fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-zinc-950 text-white z-[60] shadow-2xl flex flex-col border-l border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out">
+        <!-- GLOBAL CALCULATOR DRAWER PANEL (SIDE TOOL) -->
+        <div id="calculatorDrawerBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] hidden transition-opacity duration-300 pointer-events-none" onclick="closeCalculatorDrawer()"></div>
+        <div id="calculatorDrawer" class="fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-zinc-950 text-white z-[60] shadow-2xl flex flex-col border-l border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out pointer-events-auto">
             <!-- Header -->
             <div class="p-4 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
@@ -1879,8 +1887,9 @@
     </div>
 
     <!-- DAILY ENTRY MODAL -->
-    <div id="entryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100">
+    <div id="entryModal" class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none hidden transition-all duration-300">
+        <div id="entryModalBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-auto transition-opacity duration-300" onclick="closeEntryModal()"></div>
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100 z-10 pointer-events-auto relative">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
                 <h3 id="entryModalTitle" class="text-base font-bold text-slate-800">Add Daily Entry</h3>
                 <button type="button" onclick="toggleCalculatorDrawer()" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold transition border border-amber-200 shadow-sm flex items-center space-x-1.5" title="Open ERP Calculator">
@@ -4206,7 +4215,16 @@
                 alert('Viewers cannot add or edit entries.');
                 return;
             }
-            document.getElementById('entryModal').classList.remove('hidden');
+            const entryModal = document.getElementById('entryModal');
+            const entryBackdrop = document.getElementById('entryModalBackdrop');
+            if (entryModal) {
+                entryModal.classList.remove('hidden');
+                const drawer = document.getElementById('calculatorDrawer');
+                if (drawer && !drawer.classList.contains('translate-x-full')) {
+                    entryModal.classList.add('calc-open-layout');
+                    if (entryBackdrop) entryBackdrop.classList.add('opacity-0', 'pointer-events-none');
+                }
+            }
             document.getElementById('entryErrorMsg').classList.add('hidden');
             populateDropdowns();
             if (!isEdit) {
@@ -4218,7 +4236,17 @@
             }
         }
 
-        function closeEntryModal() { document.getElementById('entryModal').classList.add('hidden'); }
+        function closeEntryModal() {
+            const entryModal = document.getElementById('entryModal');
+            const entryBackdrop = document.getElementById('entryModalBackdrop');
+            if (entryModal) {
+                entryModal.classList.add('hidden');
+                entryModal.classList.remove('calc-open-layout');
+            }
+            if (entryBackdrop) {
+                entryBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            }
+        }
 
         function saveEntry(e) {
             e.preventDefault();
@@ -7123,24 +7151,37 @@
         let calcHistory = [];
 
         function toggleCalculatorDrawer() {
-            const backdrop = document.getElementById('calculatorDrawerBackdrop');
             const drawer = document.getElementById('calculatorDrawer');
-            if (!drawer || !backdrop) return;
+            if (!drawer) return;
 
             const isHidden = drawer.classList.contains('translate-x-full');
             if (isHidden) {
-                backdrop.classList.remove('hidden');
                 drawer.classList.remove('translate-x-full');
+                const entryModal = document.getElementById('entryModal');
+                const entryBackdrop = document.getElementById('entryModalBackdrop');
+                if (entryModal && !entryModal.classList.contains('hidden')) {
+                    entryModal.classList.add('calc-open-layout');
+                    if (entryBackdrop) entryBackdrop.classList.add('opacity-0', 'pointer-events-none');
+                }
             } else {
                 closeCalculatorDrawer();
             }
         }
 
         function closeCalculatorDrawer() {
-            const backdrop = document.getElementById('calculatorDrawerBackdrop');
             const drawer = document.getElementById('calculatorDrawer');
+            const backdrop = document.getElementById('calculatorDrawerBackdrop');
             if (backdrop) backdrop.classList.add('hidden');
             if (drawer) drawer.classList.add('translate-x-full');
+
+            const entryModal = document.getElementById('entryModal');
+            const entryBackdrop = document.getElementById('entryModalBackdrop');
+            if (entryModal) {
+                entryModal.classList.remove('calc-open-layout');
+            }
+            if (entryBackdrop) {
+                entryBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            }
         }
 
         function updateCalcDisplay() {
