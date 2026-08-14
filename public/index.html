@@ -1795,8 +1795,8 @@
         </main>
 
         <!-- GLOBAL CALCULATOR DRAWER OVERLAY -->
-        <div id="calculatorDrawerBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden transition-opacity duration-300" onclick="closeCalculatorDrawer()"></div>
-        <div id="calculatorDrawer" class="fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-zinc-950 text-white z-50 shadow-2xl flex flex-col border-l border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out">
+        <div id="calculatorDrawerBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] hidden transition-opacity duration-300" onclick="closeCalculatorDrawer()"></div>
+        <div id="calculatorDrawer" class="fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-zinc-950 text-white z-[60] shadow-2xl flex flex-col border-l border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out">
             <!-- Header -->
             <div class="p-4 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
@@ -1881,7 +1881,13 @@
     <!-- DAILY ENTRY MODAL -->
     <div id="entryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100">
-            <h3 id="entryModalTitle" class="text-base font-bold text-slate-800 mb-4">Add Daily Entry</h3>
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <h3 id="entryModalTitle" class="text-base font-bold text-slate-800">Add Daily Entry</h3>
+                <button type="button" onclick="toggleCalculatorDrawer()" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold transition border border-amber-200 shadow-sm flex items-center space-x-1.5" title="Open ERP Calculator">
+                    <i class="fa-solid fa-calculator text-amber-600"></i>
+                    <span>Calculator</span>
+                </button>
+            </div>
             <form id="entryForm" onsubmit="saveEntry(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input type="hidden" id="entryId">
                 <div>
