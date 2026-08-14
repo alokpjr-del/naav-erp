@@ -86,6 +86,9 @@ async function initTables() {
                 )
             `);
             await client.query(`ALTER TABLE "deliveryBoys" ADD COLUMN IF NOT EXISTS name TEXT`);
+            await client.query(`ALTER TABLE "deliveryBoys" ADD COLUMN IF NOT EXISTS mobile TEXT`);
+            await client.query(`ALTER TABLE "deliveryBoys" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT`);
+            await client.query(`ALTER TABLE "deliveryBoys" ADD COLUMN IF NOT EXISTS status TEXT`);
 
             await client.query(`
                 CREATE TABLE IF NOT EXISTS expenses (

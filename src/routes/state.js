@@ -130,7 +130,9 @@ async function saveSnapshot(snapshot) {
 
         await client.query('DELETE FROM "deliveryBoys"');
         for (const boy of withRequiredKey(state.deliveryBoys, 'id', 'deliveryBoys')) {
-            await client.query(`INSERT INTO "deliveryBoys" (id, name) VALUES ($1, $2)`, [boy.id, boy.name]);
+            await client.query(`INSERT INTO "deliveryBoys" (id, name, mobile, "passwordHash", status) VALUES ($1, $2, $3, $4, $5)`, [
+                boy.id, boy.name, boy.mobile || null, boy.passwordHash || null, boy.status || 'Active'
+            ]);
         }
 
         await client.query('DELETE FROM customers');

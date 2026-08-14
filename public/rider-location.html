@@ -12,11 +12,12 @@
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:20px}.logo{width:48px;height:48px;border-radius:14px;background:#111827;color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px}.brand h1{font-size:20px;margin:0}.brand p{margin:3px 0 0;color:#64748b;font-size:12px}
 label{display:block;font-size:12px;font-weight:700;color:#475569;margin:0 0 6px}input,select{width:100%;padding:12px 14px;border:1px solid #dbe1e8;border-radius:12px;outline:none;font-size:14px;margin-bottom:14px;background:#fff}input:focus,select:focus{border-color:#111827}
 .status{padding:14px;border-radius:15px;background:#f8fafc;border:1px solid #e2e8f0;margin:4px 0 14px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#94a3b8;margin-right:7px}.dot.on{background:#16a34a}.status strong{font-size:14px}.muted{font-size:12px;color:#64748b;margin-top:4px}
-button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}.primary{background:#111827;color:#fff}.danger{background:#fee2e2;color:#991b1b}.secondary{background:#eef2ff;color:#3730a3}
+button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}.primary{background:#111827;color:#fff}.danger{background:#fee2e2;color:#991b1b}.secondary{background:#eef2ff;color:#3730a3}.outline{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 .location{display:none;margin-top:14px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;line-height:1.7}.location.show{display:block}.row{display:flex;justify-content:space-between;gap:10px;margin-bottom:2px}.value{font-weight:700;color:#0f172a}
 .notice{font-size:11px;color:#64748b;line-height:1.5;margin-top:16px;text-align:center}
+.error-banner{padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:12px;font-size:12px;font-weight:700;margin-bottom:14px;display:none}
+.welcome-banner{padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:16px;margin-bottom:14px}
 
-/* Temporary On-Screen Diagnostic Panel */
 .diag-box{margin-top:16px;padding:14px;border-radius:14px;background:#1e293b;color:#f8fafc;font-size:11px;line-height:1.6;font-family:monospace}
 .diag-title{font-weight:800;color:#f59e0b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-size:11px}
 .break-all{word-break:break-all}
@@ -24,69 +25,102 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
 </head>
 <body>
 <div class="wrap"><main class="card">
-<div class="brand"><div class="logo">N</div><div><h1>NAAV Rider Location</h1><p>Simple live location sharing</p></div></div>
+<div class="brand"><div class="logo">N</div><div><h1>NAAV Rider Location</h1><p>Authenticated Location Sharing</p></div></div>
 
-<label>Select Registered Rider</label>
-<select id="riderSelect" onchange="onRiderSelect(this.value)">
-    <option value="">-- Choose Rider or Enter Below --</option>
-</select>
+<div id="errorBanner" class="error-banner"></div>
 
-<label>Rider Name</label><input id="riderName" placeholder="Enter rider name">
-<label>Rider ID / Mobile</label><input id="riderId" placeholder="Enter rider ID or mobile">
-<div class="status"><div><span id="dot" class="dot"></span><strong id="statusText">Location Sharing Off</strong></div><div id="statusSub" class="muted">Tap Start Location to begin.</div></div>
-<button id="startBtn" class="primary">📍 Start Location Sharing</button>
-<button id="stopBtn" class="danger" style="display:none">⛔ Stop Location Sharing</button>
-<button id="testBtn" class="secondary">🧪 Test GPS</button>
-
-<div id="locationBox" class="location">
-<div class="row"><span>Latitude</span><span id="lat" class="value">-</span></div>
-<div class="row"><span>Longitude</span><span id="lng" class="value">-</span></div>
-<div class="row"><span>Accuracy</span><span id="acc" class="value">-</span></div>
-<div class="row"><span>Last Updated</span><span id="updated" class="value">-</span></div>
+<!-- 1. LOGIN FORM VIEW -->
+<div id="loginSection">
+    <label>Rider ID / Mobile</label>
+    <input id="loginRiderId" placeholder="Enter Rider ID or Registered Mobile">
+    
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Enter Rider Password">
+    
+    <button id="loginBtn" class="primary">🔑 Login to Rider Portal</button>
 </div>
 
-<!-- TEMPORARY ON-SCREEN SYSTEM DIAGNOSTICS PANEL -->
+<!-- 2. AUTHENTICATED RIDER VIEW -->
+<div id="riderActiveSection" style="display:none">
+    <div class="welcome-banner">
+        <strong id="welcomeRiderName" style="font-size:16px;display:block">🚴 Welcome, Rider</strong>
+        <span id="welcomeRiderInfo" style="font-size:12px">Rider ID: -</span>
+    </div>
+
+    <div class="status">
+        <div><span id="dot" class="dot"></span><strong id="statusText">Location Sharing Off</strong></div>
+        <div id="statusSub" class="muted">Tap Start Location Sharing to begin.</div>
+    </div>
+    
+    <button id="startBtn" class="primary">📍 Start Location Sharing</button>
+    <button id="stopBtn" class="danger" style="display:none">⛔ Stop Location Sharing</button>
+    <button id="logoutBtn" class="outline">🚪 Logout</button>
+    
+    <div id="locationBox" class="location">
+        <div class="row"><span>Latitude</span><span id="lat" class="value">-</span></div>
+        <div class="row"><span>Longitude</span><span id="lng" class="value">-</span></div>
+        <div class="row"><span>Accuracy</span><span id="acc" class="value">-</span></div>
+        <div class="row"><span>Last Updated</span><span id="updated" class="value">-</span></div>
+    </div>
+</div>
+
+<!-- SYSTEM DIAGNOSTICS PANEL -->
 <div id="diagBox" class="diag-box">
   <div class="diag-title">🔧 Rider GPS System Diagnostics</div>
   <div class="row"><span>Secure Context:</span><span id="diagSecure" class="value">-</span></div>
   <div class="row"><span>GPS API:</span><span id="diagGpsApi" class="value">-</span></div>
   <div class="row"><span>Permission:</span><span id="diagPerm" class="value">-</span></div>
+  <div class="row"><span>Authenticated Session:</span><span id="diagAuthRider" class="value">-</span></div>
   <div class="row"><span>Current URL:</span><span id="diagUrl" class="value break-all">-</span></div>
-  <div class="row"><span>GPS Error Code:</span><span id="diagErrorCode" class="value">-</span></div>
-  <div class="row"><span>GPS Error Message:</span><span id="diagErrorMsg" class="value">-</span></div>
+  <div class="row"><span>GPS Status / Error:</span><span id="diagErrorMsg" class="value">-</span></div>
   <div class="row"><span>Backend API Status:</span><span id="diagApiStatus" class="value">-</span></div>
   <div class="row"><span>Last API Response:</span><span id="diagApiResponse" class="value break-all">-</span></div>
 </div>
 
-<div class="notice">📍 Location Permission Required. Serve this page over HTTPS (or localhost) for GPS tracking.</div>
+<div class="notice">📍 Location Permission Required. Serve over HTTPS for GPS tracking.</div>
 </main></div>
+
 <script>
 const $=id=>document.getElementById(id);
-let watchId=null;
-let registeredRiders=[];
-const LOCATION_API='/api/rider-location';
+let watchId = null;
+let currentRiderToken = sessionStorage.getItem('naav_rider_token') || '';
+let currentRiderObj = null;
+
+const LOCATION_API = '/api/rider-location';
+const LOGIN_API = '/api/rider-login';
+const LOGOUT_API = '/api/rider-logout';
+const SESSION_API = '/api/rider-session';
+
+function showError(msg) {
+    const el = $('errorBanner');
+    if (msg) {
+        el.textContent = msg;
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
 
 function updateDiagnostics(fields = {}) {
     const isSecure = window.isSecureContext === true;
     const hasGps = !!(navigator && navigator.geolocation);
     
-    if (fields.secureContext !== undefined) $('diagSecure').textContent = fields.secureContext;
-    else $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (Secure HTTPS / Localhost)</span>' : '<span style="color:#ef4444">NO (Insecure HTTP - Geolocation Disabled by Chrome)</span>';
-    
-    if (fields.gpsApi !== undefined) $('diagGpsApi').textContent = fields.gpsApi;
-    else $('diagGpsApi').innerHTML = hasGps ? '<span style="color:#22c55e">AVAILABLE</span>' : '<span style="color:#ef4444">NOT AVAILABLE</span>';
-    
-    if (fields.permission !== undefined) $('diagPerm').textContent = fields.permission;
-    
+    $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (HTTPS / Localhost)</span>' : '<span style="color:#ef4444">NO (Insecure HTTP)</span>';
+    $('diagGpsApi').innerHTML = hasGps ? '<span style="color:#22c55e">AVAILABLE</span>' : '<span style="color:#ef4444">NOT AVAILABLE</span>';
     $('diagUrl').textContent = window.location.href;
     
-    if (fields.errorCode !== undefined) $('diagErrorCode').textContent = fields.errorCode;
+    if (currentRiderObj) {
+        $('diagAuthRider').innerHTML = `<span style="color:#22c55e">LOGGED IN: ${currentRiderObj.name} (${currentRiderObj.id})</span>`;
+    } else {
+        $('diagAuthRider').innerHTML = '<span style="color:#94a3b8">NOT LOGGED IN</span>';
+    }
+
+    if (fields.permission !== undefined) $('diagPerm').textContent = fields.permission;
     if (fields.errorMsg !== undefined) $('diagErrorMsg').textContent = fields.errorMsg;
     if (fields.apiStatus !== undefined) $('diagApiStatus').textContent = fields.apiStatus;
     if (fields.apiResponse !== undefined) $('diagApiResponse').textContent = fields.apiResponse;
 }
 
-// Query browser geolocation permission status
 async function checkPermissionStatus() {
     if (navigator.permissions && navigator.permissions.query) {
         try {
@@ -98,153 +132,224 @@ async function checkPermissionStatus() {
         } catch (e) {
             $('diagPerm').textContent = 'QUERY FAILED (' + e.message + ')';
         }
-    } else {
-        $('diagPerm').textContent = 'PERMISSIONS API NOT SUPPORTED';
     }
 }
 
-// Initial diagnostics run on load
-updateDiagnostics({
-    errorCode: 'NONE',
-    errorMsg: 'Ready',
-    apiStatus: 'IDLE',
-    apiResponse: '-'
-});
-checkPermissionStatus();
+// 1. RIDER LOGIN HANDLER
+async function performRiderLogin() {
+    showError('');
+    const riderId = $('loginRiderId').value.trim();
+    const password = $('loginPassword').value.trim();
 
-// Fetch registered delivery boys from NAAV backend
-async function loadRegisteredRiders() {
+    if (!riderId || !password) {
+        return showError('Please enter both Rider ID / Mobile and Password.');
+    }
+
     try {
-        const res = await fetch('/api/delivery-boys');
-        if (!res.ok) return;
-        registeredRiders = await res.json();
-        const sel = $('riderSelect');
-        if (sel && registeredRiders.length > 0) {
-            registeredRiders.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.id || r.name;
-                opt.textContent = `${r.name} (${r.id || 'Rider'})`;
-                sel.appendChild(opt);
-            });
-        }
-    } catch(e) {}
-}
-loadRegisteredRiders();
+        const res = await fetch(LOGIN_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ riderId, password })
+        });
 
-function onRiderSelect(val) {
-    if (!val) return;
-    const r = registeredRiders.find(x => (x.id || x.name) === val);
-    if (r) {
-        $('riderName').value = r.name || '';
-        $('riderId').value = r.id || r.mobile || r.name;
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            showError(data.error || 'Login failed. Invalid credentials.');
+            updateDiagnostics({ apiStatus: res.status + ' Login Failed', apiResponse: JSON.stringify(data) });
+            return;
+        }
+
+        // Store Token & Rider Info
+        currentRiderToken = data.token;
+        currentRiderObj = data.rider;
+        sessionStorage.setItem('naav_rider_token', data.token);
+
+        showAuthenticatedUI();
+        updateDiagnostics({ apiStatus: '200 Login OK', apiResponse: JSON.stringify(data) });
+
+    } catch (e) {
+        showError('Network error during login: ' + e.message);
     }
 }
 
-function setStatus(on,title,sub){$('dot').classList.toggle('on',on);$('statusText').textContent=title;$('statusSub').textContent=sub;$('startBtn').style.display=on?'none':'block';$('stopBtn').style.display=on?'block':'none'}
+// 2. CHECK SESSION ON LOAD
+async function checkExistingSession() {
+    if (!currentRiderToken) {
+        showLoginUI();
+        return;
+    }
 
-async function renderPosition(p){
- const c=p.coords,n=new Date();
- $('lat').textContent=c.latitude.toFixed(6);$('lng').textContent=c.longitude.toFixed(6);$('acc').textContent=Math.round(c.accuracy)+' m';$('updated').textContent=n.toLocaleTimeString();$('locationBox').classList.add('show');
- 
- updateDiagnostics({ errorCode: '0 (SUCCESS)', errorMsg: 'Location acquired successfully' });
-
- const payload={riderId:$('riderId').value.trim(),riderName:$('riderName').value.trim(),latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy,timestamp:n.toISOString()};
- 
- try {
-     const res = await fetch(LOCATION_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-     const resData = await res.json();
-     updateDiagnostics({
-         apiStatus: res.status + ' ' + res.statusText,
-         apiResponse: JSON.stringify(resData)
-     });
- } catch(e) {
-     updateDiagnostics({
-         apiStatus: 'NETWORK / FETCH ERROR',
-         apiResponse: e.message
-     });
- }
+    try {
+        const res = await fetch(SESSION_API, {
+            headers: { 'Authorization': 'Bearer ' + currentRiderToken }
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.rider) {
+            currentRiderObj = data.rider;
+            showAuthenticatedUI();
+        } else {
+            sessionStorage.removeItem('naav_rider_token');
+            currentRiderToken = '';
+            showLoginUI();
+        }
+    } catch (e) {
+        showLoginUI();
+    }
 }
 
-function gpsError(e){
- const m={1:'Location permission denied by user/browser settings.',2:'GPS position unavailable. Ensure Location/GPS is ON in Android settings.',3:'Location request timed out. Trying again...'};
- updateDiagnostics({
-     errorCode: e.code + ' (' + (e.code === 1 ? 'PERMISSION_DENIED' : e.code === 2 ? 'POSITION_UNAVAILABLE' : 'TIMEOUT') + ')',
-     errorMsg: e.message || m[e.code] || 'Unknown GPS error'
- });
- setStatus(false,'Location Sharing Off',m[e.code]||'Unable to get location.');
+function showLoginUI() {
+    $('loginSection').style.display = 'block';
+    $('riderActiveSection').style.display = 'none';
+    currentRiderObj = null;
+    updateDiagnostics({ errorMsg: 'Please login to continue' });
 }
 
-function startLocation(){
- const riderName = $('riderName').value.trim();
- const riderId = $('riderId').value.trim();
- 
- if(!riderName || !riderId) return alert('Please enter Rider Name and Rider ID / Mobile.');
- 
- if (!window.isSecureContext) {
-     setStatus(false, 'Insecure Context (HTTP)', 'Chrome disables GPS on insecure HTTP. Please use HTTPS domain.');
-     updateDiagnostics({ errorCode: 'SECURE_CONTEXT_REQUIRED', errorMsg: 'Mobile browsers require HTTPS or localhost for GPS.' });
-     return alert('Mobile browser geolocation requires HTTPS or localhost. Current connection is non-secure HTTP.');
- }
-
- if(!navigator.geolocation) {
-     setStatus(false,'GPS Not Supported','This browser does not support GPS location.');
-     updateDiagnostics({ errorCode: 'NO_GEOLOCATION_API', errorMsg: 'navigator.geolocation is undefined' });
-     return;
- }
-
- setStatus(true,'Location Sharing On','Requesting GPS location fix…');
- updateDiagnostics({ errorCode: 'NONE', errorMsg: 'Acquiring location…' });
-
- // Attempt 1: High Accuracy with Failover to Standard Accuracy
- const highAccOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
-
- navigator.geolocation.getCurrentPosition(
-     (pos) => {
-         renderPosition(pos);
-         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-         watchId = navigator.geolocation.watchPosition(renderPosition, gpsError, { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
-     },
-     (err) => {
-         // Failover Attempt 2: Standard Accuracy (Cellular / Network)
-         updateDiagnostics({ errorCode: err.code + ' (HighAcc Failed)', errorMsg: err.message + ' - Trying standard accuracy...' });
-         navigator.geolocation.getCurrentPosition(
-             (pos) => {
-                 renderPosition(pos);
-                 if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-                 watchId = navigator.geolocation.watchPosition(renderPosition, gpsError, { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 });
-             },
-             (err2) => {
-                 gpsError(err2);
-             },
-             { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 }
-         );
-     },
-     highAccOptions
- );
+function showAuthenticatedUI() {
+    $('loginSection').style.display = 'none';
+    $('riderActiveSection').style.display = 'block';
+    $('welcomeRiderName').textContent = `🚴 Welcome, ${currentRiderObj.name}`;
+    $('welcomeRiderInfo').textContent = `Rider ID: ${currentRiderObj.id} | Mobile: ${currentRiderObj.mobile || '-'}`;
+    setStatus(false, 'Ready to Share Location', 'Tap Start Location Sharing to begin.');
+    updateDiagnostics({ errorMsg: 'Authenticated & Ready' });
 }
 
-function stopLocation(){
- if(watchId!==null) navigator.geolocation.clearWatch(watchId);
- watchId=null;
- setStatus(false,'Location Sharing Off','Location sharing has been stopped.');
- updateDiagnostics({ errorCode: 'NONE', errorMsg: 'Location sharing stopped by user' });
+// 3. LOGOUT HANDLER
+async function performRiderLogout() {
+    stopLocation();
+    if (currentRiderToken) {
+        try {
+            await fetch(LOGOUT_API, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + currentRiderToken }
+            });
+        } catch(e) {}
+    }
+    sessionStorage.removeItem('naav_rider_token');
+    currentRiderToken = '';
+    currentRiderObj = null;
+    showLoginUI();
 }
 
-$('startBtn').onclick=startLocation;
-$('stopBtn').onclick=stopLocation;
+function setStatus(on, title, sub) {
+    $('dot').classList.toggle('on', on);
+    $('statusText').textContent = title;
+    $('statusSub').textContent = sub;
+    $('startBtn').style.display = on ? 'none' : 'block';
+    $('stopBtn').style.display = on ? 'block' : 'none';
+}
 
-$('testBtn').onclick=()=>{
- if (!navigator.geolocation) return alert('GPS is not supported in this browser.');
- setStatus(true, 'Testing GPS', 'Single location fix request…');
- updateDiagnostics({ errorCode: 'NONE', errorMsg: 'Single location test request…' });
- navigator.geolocation.getCurrentPosition(
-     renderPosition,
-     (err) => {
-         updateDiagnostics({ errorCode: err.code + ' (Test Failed)', errorMsg: err.message + ' - Retrying standard accuracy...' });
-         navigator.geolocation.getCurrentPosition(renderPosition, gpsError, { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 });
-     },
-     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
- );
-};
+// 4. LOCATION POSITING
+async function renderPosition(p) {
+    const c = p.coords, n = new Date();
+    $('lat').textContent = c.latitude.toFixed(6);
+    $('lng').textContent = c.longitude.toFixed(6);
+    $('acc').textContent = Math.round(c.accuracy) + ' m';
+    $('updated').textContent = n.toLocaleTimeString();
+    $('locationBox').classList.add('show');
+
+    updateDiagnostics({ errorMsg: 'GPS position acquired' });
+
+    // Payload (Note: backend ignores client riderId/name and reads authenticated token session!)
+    const payload = {
+        latitude: c.latitude,
+        longitude: c.longitude,
+        accuracy: c.accuracy,
+        timestamp: n.toISOString()
+    };
+
+    try {
+        const res = await fetch(LOCATION_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + currentRiderToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resData = await res.json();
+        if (res.status === 401) {
+            alert('Rider session expired. Please login again.');
+            performRiderLogout();
+            return;
+        }
+
+        updateDiagnostics({
+            apiStatus: res.status + ' ' + res.statusText,
+            apiResponse: JSON.stringify(resData)
+        });
+    } catch (e) {
+        updateDiagnostics({
+            apiStatus: 'NETWORK ERROR',
+            apiResponse: e.message
+        });
+    }
+}
+
+function gpsError(e) {
+    const m = { 1: 'Location permission denied.', 2: 'GPS position unavailable.', 3: 'Location request timed out.' };
+    updateDiagnostics({
+        errorMsg: 'GPS Error ' + e.code + ': ' + (e.message || m[e.code])
+    });
+    setStatus(false, 'Location Sharing Off', m[e.code] || 'Unable to get location.');
+}
+
+function startLocation() {
+    if (!currentRiderToken || !currentRiderObj) {
+        return alert('Please login to start location sharing.');
+    }
+    if (!window.isSecureContext) {
+        setStatus(false, 'Insecure Context (HTTP)', 'Chrome disables GPS on non-secure HTTP. Use HTTPS.');
+        return alert('Mobile browser geolocation requires HTTPS or localhost.');
+    }
+    if (!navigator.geolocation) {
+        return setStatus(false, 'GPS Not Supported', 'Browser does not support GPS.');
+    }
+
+    setStatus(true, 'Location Sharing On', 'Acquiring GPS location fix…');
+    updateDiagnostics({ errorMsg: 'Acquiring GPS fix…' });
+
+    const highAccOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            renderPosition(pos);
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            watchId = navigator.geolocation.watchPosition(renderPosition, gpsError, { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
+        },
+        (err) => {
+            // Failover to Standard Accuracy
+            updateDiagnostics({ errorMsg: 'HighAcc failed. Trying standard accuracy...' });
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    renderPosition(pos);
+                    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+                    watchId = navigator.geolocation.watchPosition(renderPosition, gpsError, { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 });
+                },
+                (err2) => {
+                    gpsError(err2);
+                },
+                { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 }
+            );
+        },
+        highAccOptions
+    );
+}
+
+function stopLocation() {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    setStatus(false, 'Location Sharing Off', 'Location sharing stopped.');
+    updateDiagnostics({ errorMsg: 'Sharing stopped by user' });
+}
+
+$('loginBtn').onclick = performRiderLogin;
+$('startBtn').onclick = startLocation;
+$('stopBtn').onclick = stopLocation;
+$('logoutBtn').onclick = performRiderLogout;
+
+updateDiagnostics();
+checkPermissionStatus();
+checkExistingSession();
 </script>
 </body></html>

@@ -1468,7 +1468,11 @@
                             <thead>
                                 <tr class="text-slate-500 text-[11px] font-bold uppercase tracking-wider">
                                     <th class="p-3.5">#</th>
+                                    <th class="p-3.5">Rider ID</th>
                                     <th class="p-3.5">Delivery Boy Name</th>
+                                    <th class="p-3.5">Mobile</th>
+                                    <th class="p-3.5">Password</th>
+                                    <th class="p-3.5">Status</th>
                                     <th class="p-3.5 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -2213,13 +2217,21 @@
 
     <!-- DELIVERY BOY MODAL -->
     <div id="deliveryBoyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100">
-            <h3 class="text-base font-bold text-slate-800 mb-4">Add Delivery Boy</h3>
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 space-y-4">
+            <h3 class="text-base font-bold text-slate-800">Add Delivery Boy</h3>
             <form onsubmit="saveDeliveryBoy(event)" class="space-y-4">
                 <input type="hidden" id="deliveryBoyId">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Delivery Boy Name</label>
                     <input type="text" id="deliveryBoyName" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Mobile Number (Login ID)</label>
+                    <input type="text" id="deliveryBoyMobile" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="e.g. 9876543210">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Initial Password</label>
+                    <input type="password" id="deliveryBoyPassword" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Set initial rider password">
                 </div>
                 <div class="flex justify-end space-x-2 pt-2">
                     <button type="button" onclick="closeDeliveryBoyModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Cancel</button>
@@ -5509,31 +5521,147 @@
         // Delivery Boys
         function loadDeliveryBoys() {
             const tbody = document.getElementById('deliveryBoyTableBody');
+            if (!tbody) return;
+            
+            fetch('/api/delivery-boys')
+                .then(r => r.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        db.deliveryBoys = data;
+                    }
+                    renderDeliveryBoysTable();
+                })
+                .catch(() => renderDeliveryBoysTable());
+        }
+
+        function renderDeliveryBoysTable() {
+            const tbody = document.getElementById('deliveryBoyTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            db.deliveryBoys.forEach((d, index) => {
-                tbody.innerHTML += `<tr><td class="p-3.5">${index+1}</td><td class="p-3.5 font-bold text-slate-800">${d.name}</td><td class="p-3.5 text-right"><button onclick="deleteDeliveryBoy('${d.id}')" class="text-slate-400 hover:text-rose-600 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+
+            (db.deliveryBoys || []).forEach((d, index) => {
+                const passStatusBadge = d.hasPassword || d.passwordHash 
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Set</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">Not Set</span>`;
+
+                const statusBadge = (d.status || 'Active') === 'Active'
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">Active</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">Inactive</span>`;
+
+                const targetStatus = (d.status || 'Active') === 'Active' ? 'Inactive' : 'Active';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3.5">${index+1}</td>
+                        <td class="p-3.5 font-mono font-bold text-blue-600">${d.id}</td>
+                        <td class="p-3.5 font-bold text-slate-800">${d.name}</td>
+                        <td class="p-3.5 font-mono text-slate-600">${d.mobile || '-'}</td>
+                        <td class="p-3.5">${passStatusBadge}</td>
+                        <td class="p-3.5">${statusBadge}</td>
+                        <td class="p-3.5 text-right space-x-2">
+                            <button onclick="setRiderPasswordPrompt('${d.id}', '${d.name}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition border border-amber-200" title="Set / Reset Password">
+                                <i class="fa-solid fa-key mr-1"></i>Set Password
+                            </button>
+                            <button onclick="toggleRiderStatus('${d.id}', '${targetStatus}')" class="px-2 py-1 ${targetStatus === 'Inactive' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'} rounded-lg text-xs font-bold transition border" title="Toggle Status">
+                                ${targetStatus === 'Inactive' ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button onclick="deleteDeliveryBoy('${d.id}')" class="text-slate-400 hover:text-rose-600 transition p-1" title="Delete Rider"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
             });
         }
+
+        function setRiderPasswordPrompt(riderId, riderName) {
+            requestSecurityCheck(() => {
+                const newPass = prompt(`Set / Reset Login Password for Rider "${riderName}" (ID: ${riderId}):`);
+                if (!newPass) return;
+                if (newPass.length < 4) {
+                    alert('Password should be at least 4 characters long.');
+                    return;
+                }
+
+                fetch('/api/delivery-boys/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ riderId, password: newPass })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        alert(`Password set successfully for rider "${riderName}".`);
+                        loadDeliveryBoys();
+                    } else {
+                        alert('Error setting password: ' + (res.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => alert('Failed to connect: ' + err.message));
+            });
+        }
+
+        function toggleRiderStatus(riderId, newStatus) {
+            requestSecurityCheck(() => {
+                fetch('/api/delivery-boys/toggle-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ riderId, status: newStatus })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        loadDeliveryBoys();
+                    } else {
+                        alert('Error updating status: ' + (res.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => alert('Failed to connect: ' + err.message));
+            });
+        }
+
         function openDeliveryBoyModal() { document.getElementById('deliveryBoyModal').classList.remove('hidden'); }
         function closeDeliveryBoyModal() { document.getElementById('deliveryBoyModal').classList.add('hidden'); }
         function saveDeliveryBoy(e) {
             e.preventDefault();
             requestSecurityCheck(() => {
                 const name = document.getElementById('deliveryBoyName').value;
-                db.deliveryBoys.push({ id: 'D-' + Date.now(), name });
-                logAudit('Add', `Delivery Boy Added: ${name}`);
-                saveDB();
-                closeDeliveryBoyModal();
-                loadDeliveryBoys();
+                const mobile = document.getElementById('deliveryBoyMobile') ? document.getElementById('deliveryBoyMobile').value : '';
+                const initialPass = document.getElementById('deliveryBoyPassword') ? document.getElementById('deliveryBoyPassword').value : '';
+                const riderId = 'RIDER-' + Date.now().toString().substring(7);
+
+                fetch('/api/delivery-boys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: riderId, name, mobile, status: 'Active' })
+                })
+                .then(r => r.json())
+                .then(() => {
+                    if (initialPass && initialPass.length >= 4) {
+                        return fetch('/api/delivery-boys/set-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ riderId, password: initialPass })
+                        });
+                    }
+                })
+                .then(() => {
+                    logAudit('Add', `Delivery Boy Added: ${name}`);
+                    closeDeliveryBoyModal();
+                    loadDeliveryBoys();
+                })
+                .catch(() => {
+                    closeDeliveryBoyModal();
+                    loadDeliveryBoys();
+                });
             });
         }
         function deleteDeliveryBoy(id) { 
             requestSecurityCheck(() => { 
-                const d = db.deliveryBoys.find(x => x.id === id);
-                db.deliveryBoys = db.deliveryBoys.filter(x => x.id !== id); 
-                logAudit('Delete', `Delivery Boy Deleted: ${d ? d.name : id}`);
-                saveDB(); 
-                loadDeliveryBoys(); 
+                const d = (db.deliveryBoys || []).find(x => x.id === id);
+                fetch('/api/delivery-boys/' + id, { method: 'DELETE' })
+                    .then(() => {
+                        logAudit('Delete', `Delivery Boy Deleted: ${d ? d.name : id}`);
+                        loadDeliveryBoys();
+                    });
             }); 
         }
 
