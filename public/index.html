@@ -2241,6 +2241,46 @@
         </div>
     </div>
 
+    <!-- EDIT DELIVERY BOY MODAL -->
+    <div id="editDeliveryBoyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-base font-bold text-slate-800 flex items-center">
+                    <i class="fa-solid fa-pen-to-square text-blue-600 mr-2"></i>Edit Delivery Boy
+                </h3>
+                <button type="button" onclick="closeEditDeliveryBoyModal()" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 text-slate-500 rounded-xl transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="saveEditDeliveryBoy(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Rider ID (Read Only)</label>
+                    <input type="text" id="editDeliveryBoyId" readonly class="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono font-bold text-slate-600 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Delivery Boy Name</label>
+                    <input type="text" id="editDeliveryBoyName" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Mobile Number (10 digits)</label>
+                    <input type="text" id="editDeliveryBoyMobile" maxlength="10" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 font-mono" placeholder="Enter 10-digit mobile number">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Status</label>
+                    <select id="editDeliveryBoyStatus" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div id="editDeliveryBoyErrorMsg" class="text-rose-600 text-xs font-medium hidden"></div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeEditDeliveryBoyModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 transition">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- CHANGE PAYMENT MODE MODAL -->
     <div id="paymentModeModal" onclick="if(event.target===this)closePaymentModeModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 space-y-4">
@@ -5559,6 +5599,9 @@
                         <td class="p-3.5">${passStatusBadge}</td>
                         <td class="p-3.5">${statusBadge}</td>
                         <td class="p-3.5 text-right space-x-2">
+                            <button onclick="openEditDeliveryBoyModal('${d.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition border border-blue-200" title="Edit Rider Details">
+                                <i class="fa-solid fa-pen-to-square mr-1"></i>Edit
+                            </button>
                             <button onclick="setRiderPasswordPrompt('${d.id}', '${d.name}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition border border-amber-200" title="Set / Reset Password">
                                 <i class="fa-solid fa-key mr-1"></i>Set Password
                             </button>
@@ -5615,6 +5658,71 @@
                     }
                 })
                 .catch(err => alert('Failed to connect: ' + err.message));
+            });
+        }
+
+        function openEditDeliveryBoyModal(id) {
+            const d = (db.deliveryBoys || []).find(x => x.id === id);
+            if (!d) return;
+            
+            document.getElementById('editDeliveryBoyId').value = d.id;
+            document.getElementById('editDeliveryBoyName').value = d.name || '';
+            document.getElementById('editDeliveryBoyMobile').value = d.mobile || '';
+            document.getElementById('editDeliveryBoyStatus').value = d.status || 'Active';
+            
+            const errEl = document.getElementById('editDeliveryBoyErrorMsg');
+            if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+            
+            document.getElementById('editDeliveryBoyModal').classList.remove('hidden');
+        }
+
+        function closeEditDeliveryBoyModal() {
+            document.getElementById('editDeliveryBoyModal').classList.add('hidden');
+        }
+
+        function saveEditDeliveryBoy(e) {
+            e.preventDefault();
+            requestSecurityCheck(() => {
+                const id = document.getElementById('editDeliveryBoyId').value;
+                const name = document.getElementById('editDeliveryBoyName').value.trim();
+                const mobile = document.getElementById('editDeliveryBoyMobile').value.trim();
+                const status = document.getElementById('editDeliveryBoyStatus').value;
+                const errEl = document.getElementById('editDeliveryBoyErrorMsg');
+
+                if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+                if (!name) {
+                    if (errEl) { errEl.textContent = 'Delivery Boy Name is required.'; errEl.classList.remove('hidden'); }
+                    return;
+                }
+
+                if (mobile && (!/^\d{10}$/.test(mobile))) {
+                    if (errEl) { errEl.textContent = 'Mobile number must be a valid 10-digit number.'; errEl.classList.remove('hidden'); }
+                    return;
+                }
+
+                const oldObj = (db.deliveryBoys || []).find(x => x.id === id) || {};
+
+                fetch('/api/delivery-boys/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, mobile, status })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        logAudit('Update', `Delivery Boy Updated: ${name} (ID: ${id}) - Old Name: ${oldObj.name || '-'} -> New Name: ${name}, Old Mobile: ${oldObj.mobile || '-'} -> New Mobile: ${mobile || '-'}, Old Status: ${oldObj.status || 'Active'} -> New Status: ${status}`);
+                        closeEditDeliveryBoyModal();
+                        loadDeliveryBoys();
+                    } else {
+                        if (errEl) { errEl.textContent = res.error || 'Failed to update rider.'; errEl.classList.remove('hidden'); }
+                        else { alert(res.error || 'Failed to update rider.'); }
+                    }
+                })
+                .catch(err => {
+                    if (errEl) { errEl.textContent = 'Error: ' + err.message; errEl.classList.remove('hidden'); }
+                    else { alert('Failed to connect: ' + err.message); }
+                });
             });
         }
 

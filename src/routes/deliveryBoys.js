@@ -15,26 +15,79 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Add / Update Delivery Boy
+// Add Delivery Boy
 router.post('/', async (req, res) => {
     const d = req.body || {};
+    const cleanMobile = d.mobile ? String(d.mobile).replace(/[^0-9]/g, '').trim() : '';
+
+    if (cleanMobile && cleanMobile.length !== 10) {
+        return res.status(400).json({ success: false, error: 'Mobile number must be a 10-digit number.' });
+    }
+
     try {
+        if (cleanMobile) {
+            const dupCheck = await pool.query(
+                `SELECT id, name FROM "deliveryBoys" WHERE mobile = $1 AND id != $2`,
+                [cleanMobile, d.id]
+            );
+            if (dupCheck.rows.length > 0) {
+                return res.status(400).json({ success: false, error: `Mobile number is already assigned to another rider (${dupCheck.rows[0].name}).` });
+            }
+        }
+
         await pool.query(
             `INSERT INTO "deliveryBoys" (id, name, mobile, status)
             VALUES ($1, $2, $3, $4)
             ON CONFLICT (id)
             DO UPDATE SET
                 name = EXCLUDED.name,
-                mobile = COALESCE(EXCLUDED.mobile, "deliveryBoys".mobile),
-                status = COALESCE(EXCLUDED.status, "deliveryBoys".status)`,
+                mobile = EXCLUDED.mobile,
+                status = EXCLUDED.status`,
             [
                 d.id,
-                d.name,
-                d.mobile || null,
+                d.name ? d.name.trim() : '',
+                cleanMobile || null,
                 d.status || 'Active'
             ]
         );
         res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// PUT /api/delivery-boys/:id - Edit Delivery Boy details (name, mobile, status)
+router.put('/:id', async (req, res) => {
+    const riderId = req.params.id;
+    const { name, mobile, status } = req.body || {};
+
+    if (!name || !name.trim()) {
+        return res.status(400).json({ success: false, error: 'Delivery Boy Name is required.' });
+    }
+
+    const cleanMobile = mobile ? String(mobile).replace(/[^0-9]/g, '').trim() : '';
+
+    if (cleanMobile && cleanMobile.length !== 10) {
+        return res.status(400).json({ success: false, error: 'Mobile number must be a 10-digit number.' });
+    }
+
+    try {
+        if (cleanMobile) {
+            const dupCheck = await pool.query(
+                `SELECT id, name FROM "deliveryBoys" WHERE mobile = $1 AND id != $2`,
+                [cleanMobile, riderId]
+            );
+            if (dupCheck.rows.length > 0) {
+                return res.status(400).json({ success: false, error: `Mobile number is already assigned to another rider (${dupCheck.rows[0].name}).` });
+            }
+        }
+
+        const result = await pool.query(
+            `UPDATE "deliveryBoys" SET name = $1, mobile = $2, status = $3 WHERE id = $4`,
+            [name.trim(), cleanMobile || null, status || 'Active', riderId]
+        );
+
+        res.json({ success: true, changes: result.rowCount });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
