@@ -1913,12 +1913,15 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Mobile Number</label>
-                    <input type="text" id="entryCustomerMobile" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    <input type="text" id="entryCustomerMobile" required oninput="onCustomerMobileInput(this.value)" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="e.g. 9876543210">
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Customer Address</label>
                     <input type="text" id="entryCustomerAddress" class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                 </div>
+
+                <!-- CUSTOMER INSIGHT CARD CONTAINER -->
+                <div id="entryCustomerInsightCard" class="sm:col-span-2 hidden bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 shadow-lg space-y-3"></div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Restaurant</label>
                     <select id="entryRestaurant" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"></select>
@@ -1983,6 +1986,36 @@
                     <button type="submit" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-600/20 transition">Save Entry</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- CUSTOMER HISTORY MODAL -->
+    <div id="customerHistoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-user-clock text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 id="customerHistoryModalTitle" class="text-base font-bold text-slate-800">Customer Order History</h3>
+                        <p id="customerHistoryModalSubtitle" class="text-xs text-slate-500">All recorded orders for this customer</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCustomerHistoryModal()" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 text-slate-500 rounded-xl transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Customer Summary Stats -->
+            <div id="customerHistoryStats" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
+
+            <!-- History Table -->
+            <div id="customerHistoryTableContent" class="overflow-x-auto"></div>
+
+            <div class="flex justify-end pt-2">
+                <button type="button" onclick="closeCustomerHistoryModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Close</button>
+            </div>
         </div>
     </div>
 
@@ -3962,6 +3995,7 @@
                 let actionsHtml = `
                     <button onclick="showOrderReceipt('${e.id}')" class="text-slate-400 hover:text-emerald-600 transition p-1" title="View Receipt"><i class="fa-solid fa-receipt"></i></button>
                     <button onclick="showOrderTimeline('${e.id}')" class="text-slate-400 hover:text-indigo-600 transition p-1" title="Timeline History"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    <button onclick="openCustomerHistoryModal('${e.customerMobile || ''}', '${e.customerName || ''}')" class="text-slate-400 hover:text-purple-600 transition p-1" title="Customer History"><i class="fa-solid fa-user-gear"></i></button>
                 `;
                 if (role !== 'Viewer') {
                     actionsHtml += `
@@ -7381,6 +7415,351 @@
                 closeCalculatorDrawer();
             }
         });
+        // ====================================================
+        // CUSTOMER MANAGEMENT ENGINE & HANDLERS
+        // ====================================================
+
+        function normalizeCustomerMobile(mobile) {
+            if (!mobile) return '';
+            let digits = String(mobile).replace(/[^0-9]/g, '');
+            if (digits.length === 12 && digits.startsWith('91')) digits = digits.substring(2);
+            else if (digits.length === 11 && digits.startsWith('0')) digits = digits.substring(1);
+            return digits;
+        }
+
+        function getCustomerInsights(mobileQuery) {
+            const cleanTarget = normalizeCustomerMobile(mobileQuery);
+            if (!cleanTarget || cleanTarget.length < 5) return null;
+
+            const allEntries = db.entries || [];
+            const customerOrders = allEntries.filter(e => {
+                const eMobile = normalizeCustomerMobile(e.customerMobile);
+                return eMobile && eMobile === cleanTarget;
+            });
+
+            if (customerOrders.length === 0) return null;
+
+            customerOrders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+            const newestOrder = customerOrders[0];
+            const customerName = newestOrder.customerName || 'Customer';
+            const customerAddress = newestOrder.customerAddress || '';
+            const totalOrders = customerOrders.length;
+
+            let totalSpent = 0;
+            let pendingAmount = 0;
+
+            const restaurantCounts = {};
+            const categoryCounts = {};
+            const dates = [];
+
+            const today = typeof getOperationalDateStr === 'function' ? getOperationalDateStr() : new Date().toISOString().split('T')[0];
+            const currentMonthStr = today.substring(0, 7);
+
+            let thisMonthOrders = 0;
+            let thisMonthSpending = 0;
+
+            customerOrders.forEach(e => {
+                const amt = (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+                totalSpent += amt;
+
+                if (e.orderStatus === 'Pending') {
+                    pendingAmount += amt;
+                }
+
+                if (e.date) {
+                    dates.push(e.date);
+                    if (e.date.startsWith(currentMonthStr)) {
+                        thisMonthOrders += 1;
+                        thisMonthSpending += amt;
+                    }
+                }
+
+                if (e.vendor) {
+                    restaurantCounts[e.vendor] = (restaurantCounts[e.vendor] || 0) + 1;
+                }
+                if (e.category) {
+                    categoryCounts[e.category] = (categoryCounts[e.category] || 0) + 1;
+                }
+            });
+
+            const avgOrderValue = totalOrders > 0 ? (totalSpent / totalOrders) : 0;
+
+            dates.sort();
+            const firstOrderDate = dates.length > 0 ? dates[0] : '-';
+            const lastOrderDate = dates.length > 0 ? dates[dates.length - 1] : '-';
+
+            let favRestaurant = '-';
+            let maxRestCount = 0;
+            Object.keys(restaurantCounts).forEach(r => {
+                if (restaurantCounts[r] > maxRestCount) {
+                    maxRestCount = restaurantCounts[r];
+                    favRestaurant = r;
+                }
+            });
+
+            let favCategory = '-';
+            let maxCatCount = 0;
+            Object.keys(categoryCounts).forEach(c => {
+                if (categoryCounts[c] > maxCatCount) {
+                    maxCatCount = categoryCounts[c];
+                    favCategory = c;
+                }
+            });
+
+            let classification = 'New';
+            let classBadgeClass = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+            if (totalOrders >= 10) {
+                classification = 'VIP Customer';
+                classBadgeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-extrabold';
+            } else if (totalOrders >= 5) {
+                classification = 'Frequent Customer';
+                classBadgeClass = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+            } else if (totalOrders >= 2) {
+                classification = 'Regular Customer';
+                classBadgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+            } else {
+                classification = 'New Customer';
+                classBadgeClass = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+            }
+
+            return {
+                cleanTarget,
+                customerName,
+                customerAddress,
+                totalOrders,
+                totalSpent,
+                avgOrderValue,
+                firstOrderDate,
+                lastOrderDate,
+                thisMonthOrders,
+                thisMonthSpending,
+                favRestaurant,
+                favCategory,
+                pendingAmount,
+                classification,
+                classBadgeClass,
+                customerOrders,
+                newestOrder
+            };
+        }
+
+        function onCustomerMobileInput(val) {
+            const cardEl = document.getElementById('entryCustomerInsightCard');
+            if (!cardEl) return;
+
+            const insights = getCustomerInsights(val);
+
+            if (!insights) {
+                const cleanDigits = String(val).replace(/[^0-9]/g, '');
+                if (cleanDigits.length >= 10) {
+                    cardEl.classList.remove('hidden');
+                    cardEl.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30">NEW CUSTOMER</span>
+                                <span class="text-xs text-slate-300 font-medium">First time ordering in NAAV ACCOUNTS</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    cardEl.classList.add('hidden');
+                }
+                return;
+            }
+
+            const nameInput = document.getElementById('entryCustomerName');
+            const addrInput = document.getElementById('entryCustomerAddress');
+
+            if (nameInput && !nameInput.value.trim() && insights.customerName) {
+                nameInput.value = insights.customerName;
+            }
+            if (addrInput && !addrInput.value.trim() && insights.customerAddress) {
+                addrInput.value = insights.customerAddress;
+            }
+
+            cardEl.classList.remove('hidden');
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-700/60 pb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase border ${insights.classBadgeClass}">${insights.classification}</span>
+                        <span class="text-xs font-bold text-white">${insights.customerName}</span>
+                    </div>
+                    <div class="flex space-x-1.5 text-[10px]">
+                        <button type="button" onclick="openCustomerHistoryModal('${insights.cleanTarget}')" class="px-2 py-1 bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 rounded-lg font-bold border border-purple-500/40 transition">
+                            <i class="fa-solid fa-clock-rotate-left mr-1"></i>History
+                        </button>
+                        <button type="button" onclick="triggerCustomerWhatsApp('${insights.cleanTarget}')" class="px-2 py-1 bg-emerald-600/40 hover:bg-emerald-600/60 text-emerald-200 rounded-lg font-bold border border-emerald-500/40 transition">
+                            <i class="fa-brands fa-whatsapp mr-1"></i>WhatsApp
+                        </button>
+                        <button type="button" onclick="reorderCustomerLast('${insights.newestOrder.id || insights.newestOrder.orderId}')" class="px-2 py-1 bg-amber-500/40 hover:bg-amber-500/60 text-amber-200 rounded-lg font-bold border border-amber-500/40 transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i>Reorder
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
+                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">Total Orders</span>
+                        <span class="text-sm font-extrabold text-blue-400">${insights.totalOrders}</span>
+                    </div>
+                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
+                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">Total Spent</span>
+                        <span class="text-sm font-extrabold text-emerald-400">₹${insights.totalSpent.toFixed(2)}</span>
+                    </div>
+                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
+                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">Avg Order</span>
+                        <span class="text-sm font-extrabold text-purple-400">₹${insights.avgOrderValue.toFixed(2)}</span>
+                    </div>
+                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
+                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">This Month</span>
+                        <span class="text-sm font-extrabold text-amber-400">₹${insights.thisMonthSpending.toFixed(2)} (${insights.thisMonthOrders})</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-[10px] text-slate-300 flex-wrap gap-2 pt-1 border-t border-slate-800/60">
+                    <div><span class="text-slate-400 font-bold">Fav Rest:</span> <span class="text-white font-semibold">${insights.favRestaurant}</span></div>
+                    <div><span class="text-slate-400 font-bold">Fav Cat:</span> <span class="text-white font-semibold">${insights.favCategory}</span></div>
+                    ${insights.pendingAmount > 0 ? `<div class="text-rose-400 font-extrabold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Pending Due: ₹${insights.pendingAmount.toFixed(2)}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function openCustomerHistoryModal(mobileQuery, nameQuery = '') {
+            const insights = getCustomerInsights(mobileQuery) || (nameQuery ? getCustomerInsightsByName(nameQuery) : null);
+            const modal = document.getElementById('customerHistoryModal');
+            if (!modal) return;
+
+            if (!insights) {
+                alert('No prior order history found for this customer.');
+                return;
+            }
+
+            document.getElementById('customerHistoryModalTitle').innerText = `Customer History: ${insights.customerName}`;
+            document.getElementById('customerHistoryModalSubtitle').innerText = `Mobile: ${insights.cleanTarget} | Status: ${insights.classification}`;
+
+            const statsEl = document.getElementById('customerHistoryStats');
+            if (statsEl) {
+                statsEl.innerHTML = `
+                    <div class="p-2.5 bg-blue-50 rounded-xl border border-blue-100">
+                        <span class="block text-[10px] font-bold text-blue-600 uppercase">Total Orders</span>
+                        <span class="text-sm font-extrabold text-blue-800">${insights.totalOrders}</span>
+                    </div>
+                    <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <span class="block text-[10px] font-bold text-emerald-600 uppercase">Lifetime Spent</span>
+                        <span class="text-sm font-extrabold text-emerald-800">₹${insights.totalSpent.toFixed(2)}</span>
+                    </div>
+                    <div class="p-2.5 bg-purple-50 rounded-xl border border-purple-100">
+                        <span class="block text-[10px] font-bold text-purple-600 uppercase">Avg Order</span>
+                        <span class="text-sm font-extrabold text-purple-800">₹${insights.avgOrderValue.toFixed(2)}</span>
+                    </div>
+                    <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-100">
+                        <span class="block text-[10px] font-bold text-amber-600 uppercase">This Month</span>
+                        <span class="text-sm font-extrabold text-amber-800">₹${insights.thisMonthSpending.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+
+            const tableEl = document.getElementById('customerHistoryTableContent');
+            if (tableEl) {
+                tableEl.innerHTML = `
+                    <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                        <thead>
+                            <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                <th class="p-2.5">Date</th>
+                                <th class="p-2.5">Order ID</th>
+                                <th class="p-2.5">Restaurant</th>
+                                <th class="p-2.5">Category</th>
+                                <th class="p-2.5">Rate</th>
+                                <th class="p-2.5">Delivery</th>
+                                <th class="p-2.5">Total</th>
+                                <th class="p-2.5">Mode</th>
+                                <th class="p-2.5">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${insights.customerOrders.map(item => {
+                                const tot = (Number(item.vendorRate || 0) + Number(item.deliveryCharge || 0));
+                                return `
+                                    <tr>
+                                        <td class="p-2.5 font-medium text-slate-500">${item.date}</td>
+                                        <td class="p-2.5 font-mono font-bold text-blue-600">${item.orderId}</td>
+                                        <td class="p-2.5 font-bold text-slate-800">${item.vendor}</td>
+                                        <td class="p-2.5 text-slate-600">${item.category}</td>
+                                        <td class="p-2.5">₹${Number(item.vendorRate || 0).toFixed(2)}</td>
+                                        <td class="p-2.5">₹${Number(item.deliveryCharge || 0).toFixed(2)}</td>
+                                        <td class="p-2.5 font-extrabold text-slate-900">₹${tot.toFixed(2)}</td>
+                                        <td class="p-2.5">${item.paymentMode || 'Cash'}</td>
+                                        <td class="p-2.5">
+                                            <button type="button" onclick="reorderCustomerLast('${item.id || item.orderId}')" class="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold transition flex items-center space-x-1 text-[10px]">
+                                                <i class="fa-solid fa-rotate-right"></i><span>Reorder</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeCustomerHistoryModal() {
+            const modal = document.getElementById('customerHistoryModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function getCustomerInsightsByName(nameQuery) {
+            if (!nameQuery) return null;
+            const normName = nameQuery.trim().toLowerCase();
+            const matching = (db.entries || []).find(e => (e.customerName || '').trim().toLowerCase() === normName);
+            if (matching && matching.customerMobile) {
+                return getCustomerInsights(matching.customerMobile);
+            }
+            return null;
+        }
+
+        function triggerCustomerWhatsApp(mobile) {
+            const clean = normalizeCustomerMobile(mobile);
+            if (!clean) return alert('Customer mobile number missing');
+            const msg = `Hello from ${db.settings.companyName || 'NAAV ACCOUNTS'}! How can we serve you today?`;
+            openWhatsAppMessage(msg, clean);
+        }
+
+        function reorderCustomerLast(orderRefId) {
+            const entry = (db.entries || []).find(x => x.id === orderRefId || x.orderId === orderRefId);
+            if (!entry) return alert('Historical order record not found');
+
+            closeCustomerHistoryModal();
+            openEntryModal(false);
+
+            const nameInput = document.getElementById('entryCustomerName');
+            const mobileInput = document.getElementById('entryCustomerMobile');
+            const addrInput = document.getElementById('entryCustomerAddress');
+            const restInput = document.getElementById('entryRestaurant');
+            const catInput = document.getElementById('entryCategory');
+            const rateInput = document.getElementById('entryVendorRate');
+            const onlineInput = document.getElementById('entryOnlineRate');
+            const delInput = document.getElementById('entryDeliveryCharge');
+            const pmInput = document.getElementById('entryPaymentMode');
+
+            if (nameInput) nameInput.value = entry.customerName || '';
+            if (mobileInput) {
+                mobileInput.value = entry.customerMobile || '';
+                onCustomerMobileInput(entry.customerMobile || '');
+            }
+            if (addrInput) addrInput.value = entry.customerAddress || '';
+            if (restInput) restInput.value = entry.vendor || '';
+            if (catInput) catInput.value = entry.category || '';
+            if (rateInput) rateInput.value = entry.vendorRate || '';
+            if (onlineInput) onlineInput.value = entry.onlineRate || '';
+            if (delInput) delInput.value = entry.deliveryCharge || '';
+            if (pmInput) pmInput.value = entry.paymentMode || 'Cash';
+
+            if (typeof calculateProfit === 'function') calculateProfit();
+        }
     </script>
 </body>
 </html>
