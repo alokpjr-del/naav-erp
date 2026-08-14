@@ -7418,6 +7418,7 @@
         // ====================================================
         // CUSTOMER MANAGEMENT ENGINE & HANDLERS
         // ====================================================
+        let currentSelectedCustomerMobile = '';
 
         function normalizeCustomerMobile(mobile) {
             if (!mobile) return '';
@@ -7555,11 +7556,9 @@
                 if (cleanDigits.length >= 10) {
                     cardEl.classList.remove('hidden');
                     cardEl.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-2">
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30">NEW CUSTOMER</span>
-                                <span class="text-xs text-slate-300 font-medium">First time ordering in NAAV ACCOUNTS</span>
-                            </div>
+                        <div class="flex items-center space-x-2 p-2 bg-blue-50 border border-blue-200 rounded-xl text-xs">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-600 text-white">+ NEW CUSTOMER</span>
+                            <span class="text-slate-600 font-medium">First order for this mobile number</span>
                         </div>
                     `;
                 } else {
@@ -7580,49 +7579,246 @@
 
             cardEl.classList.remove('hidden');
             cardEl.innerHTML = `
-                <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-700/60 pb-2">
+                <div class="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
                     <div class="flex items-center space-x-2">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase border ${insights.classBadgeClass}">${insights.classification}</span>
-                        <span class="text-xs font-bold text-white">${insights.customerName}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white flex items-center"><i class="fa-solid fa-check mr-1 text-[9px]"></i>EXISTING CUSTOMER</span>
+                        <span class="font-bold text-slate-800">${insights.customerName}</span>
+                        <span class="text-[10px] text-slate-500 font-medium">(${insights.totalOrders} past orders)</span>
                     </div>
-                    <div class="flex space-x-1.5 text-[10px]">
-                        <button type="button" onclick="openCustomerHistoryModal('${insights.cleanTarget}')" class="px-2 py-1 bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 rounded-lg font-bold border border-purple-500/40 transition">
-                            <i class="fa-solid fa-clock-rotate-left mr-1"></i>History
-                        </button>
-                        <button type="button" onclick="triggerCustomerWhatsApp('${insights.cleanTarget}')" class="px-2 py-1 bg-emerald-600/40 hover:bg-emerald-600/60 text-emerald-200 rounded-lg font-bold border border-emerald-500/40 transition">
-                            <i class="fa-brands fa-whatsapp mr-1"></i>WhatsApp
-                        </button>
-                        <button type="button" onclick="reorderCustomerLast('${insights.newestOrder.id || insights.newestOrder.orderId}')" class="px-2 py-1 bg-amber-500/40 hover:bg-amber-500/60 text-amber-200 rounded-lg font-bold border border-amber-500/40 transition">
-                            <i class="fa-solid fa-rotate-right mr-1"></i>Reorder
-                        </button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
-                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
-                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">Total Orders</span>
-                        <span class="text-sm font-extrabold text-blue-400">${insights.totalOrders}</span>
-                    </div>
-                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
-                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">Total Spent</span>
-                        <span class="text-sm font-extrabold text-emerald-400">₹${insights.totalSpent.toFixed(2)}</span>
-                    </div>
-                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
-                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">Avg Order</span>
-                        <span class="text-sm font-extrabold text-purple-400">₹${insights.avgOrderValue.toFixed(2)}</span>
-                    </div>
-                    <div class="bg-slate-950/40 p-2 rounded-xl border border-slate-800">
-                        <span class="block text-[9px] text-slate-400 font-sans uppercase font-bold">This Month</span>
-                        <span class="text-sm font-extrabold text-amber-400">₹${insights.thisMonthSpending.toFixed(2)} (${insights.thisMonthOrders})</span>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between text-[10px] text-slate-300 flex-wrap gap-2 pt-1 border-t border-slate-800/60">
-                    <div><span class="text-slate-400 font-bold">Fav Rest:</span> <span class="text-white font-semibold">${insights.favRestaurant}</span></div>
-                    <div><span class="text-slate-400 font-bold">Fav Cat:</span> <span class="text-white font-semibold">${insights.favCategory}</span></div>
-                    ${insights.pendingAmount > 0 ? `<div class="text-rose-400 font-extrabold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Pending Due: ₹${insights.pendingAmount.toFixed(2)}</div>` : ''}
+                    <button type="button" onclick="openCustomerHistoryModal('${insights.cleanTarget}')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-purple-700 rounded-lg font-bold border border-purple-200 shadow-sm transition flex items-center space-x-1 text-[11px]">
+                        <i class="fa-solid fa-clock-rotate-left text-[10px]"></i><span>View History</span>
+                    </button>
                 </div>
             `;
+        }
+
+        function renderCustomerAnalytics() {
+            const container = document.getElementById('customerAnalyticsContent');
+            if (!container) return;
+
+            const allEntries = db.entries || [];
+            
+            const customerMap = {};
+            allEntries.forEach(e => {
+                const mob = normalizeCustomerMobile(e.customerMobile);
+                const name = (e.customerName || 'Walk-in / Direct').trim();
+                const key = mob || name.toLowerCase();
+
+                if (!customerMap[key]) {
+                    customerMap[key] = {
+                        key,
+                        name,
+                        mobile: e.customerMobile || '',
+                        cleanMobile: mob,
+                        orders: [],
+                        totalSpend: 0
+                    };
+                }
+                const amt = (Number(e.vendorRate || 0) + Number(e.deliveryCharge || 0));
+                customerMap[key].orders.push(e);
+                customerMap[key].totalSpend += amt;
+            });
+
+            const customerList = Object.values(customerMap);
+            const totalUnique = customerList.length;
+            const repeatCustomers = customerList.filter(c => c.orders.length > 1).length;
+            const totalRevenue = customerList.reduce((sum, c) => sum + c.totalSpend, 0);
+
+            const searchInput = document.getElementById('custAnalyticsSearchInput');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            
+            let filteredList = customerList;
+            if (query) {
+                filteredList = customerList.filter(c => 
+                    c.name.toLowerCase().includes(query) || 
+                    c.mobile.includes(query) || 
+                    c.cleanMobile.includes(query)
+                );
+            }
+
+            if (!currentSelectedCustomerMobile && filteredList.length > 0) {
+                currentSelectedCustomerMobile = filteredList[0].cleanMobile || filteredList[0].name;
+            }
+
+            const selectedInsight = currentSelectedCustomerMobile ? getCustomerInsights(currentSelectedCustomerMobile) || getCustomerInsightsByName(currentSelectedCustomerMobile) : null;
+
+            container.innerHTML = `
+                <!-- Top Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="erp-card p-4 bg-purple-50/50 border border-purple-100">
+                        <span class="block text-[10px] font-bold text-purple-600 uppercase tracking-wider">Total Unique Customers</span>
+                        <span class="text-xl font-extrabold text-purple-900">${totalUnique}</span>
+                    </div>
+                    <div class="erp-card p-4 bg-emerald-50/50 border border-emerald-100">
+                        <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Customer Lifetime Revenue</span>
+                        <span class="text-xl font-extrabold text-emerald-900">₹${totalRevenue.toFixed(2)}</span>
+                    </div>
+                    <div class="erp-card p-4 bg-blue-50/50 border border-blue-100">
+                        <span class="block text-[10px] font-bold text-blue-600 uppercase tracking-wider">Repeat Customers</span>
+                        <span class="text-xl font-extrabold text-blue-900">${repeatCustomers} <span class="text-xs font-semibold text-slate-500">(${totalUnique > 0 ? ((repeatCustomers/totalUnique)*100).toFixed(0) : 0}%)</span></span>
+                    </div>
+                </div>
+
+                <!-- Customer Search Bar & Profile Dashboard -->
+                <div class="erp-card p-5 space-y-4">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <h4 class="text-sm font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-user-gear text-purple-600 mr-2"></i>Customer Search & Detailed Profile
+                        </h4>
+                        <div class="relative w-full sm:w-80">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            </span>
+                            <input type="text" id="custAnalyticsSearchInput" oninput="renderCustomerAnalytics()" value="${query}" placeholder="Search customer by name or mobile..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-600">
+                        </div>
+                    </div>
+
+                    ${selectedInsight ? `
+                        <!-- Selected Customer Profile Card -->
+                        <div class="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 space-y-4 shadow-lg">
+                            <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-800 pb-3">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border ${selectedInsight.classBadgeClass}">${selectedInsight.classification}</span>
+                                        <h3 class="text-base font-extrabold text-white">${selectedInsight.customerName}</h3>
+                                    </div>
+                                    <p class="text-xs text-slate-400 font-mono mt-0.5">Mobile: ${selectedInsight.cleanTarget} ${selectedInsight.customerAddress ? '| Address: ' + selectedInsight.customerAddress : ''}</p>
+                                </div>
+                                <div class="flex space-x-2 text-xs">
+                                    <button type="button" onclick="triggerCustomerWhatsApp('${selectedInsight.cleanTarget}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center space-x-1.5 shadow-sm">
+                                        <i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span>
+                                    </button>
+                                    <button type="button" onclick="reorderCustomerLast('${selectedInsight.newestOrder.id || selectedInsight.newestOrder.orderId}')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-xl font-bold transition flex items-center space-x-1.5 shadow-sm">
+                                        <i class="fa-solid fa-rotate-right"></i><span>Reorder Last</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Metrics Grid -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400 font-sans uppercase font-bold">Total Orders</span>
+                                    <span class="text-base font-extrabold text-blue-400">${selectedInsight.totalOrders}</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400 font-sans uppercase font-bold">Lifetime Total Spent</span>
+                                    <span class="text-base font-extrabold text-emerald-400">₹${selectedInsight.totalSpent.toFixed(2)}</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400 font-sans uppercase font-bold">Average Order Value</span>
+                                    <span class="text-base font-extrabold text-purple-400">₹${selectedInsight.avgOrderValue.toFixed(2)}</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400 font-sans uppercase font-bold">This Month Spend</span>
+                                    <span class="text-base font-extrabold text-amber-400">₹${selectedInsight.thisMonthSpending.toFixed(2)} (${selectedInsight.thisMonthOrders} orders)</span>
+                                </div>
+                            </div>
+
+                            <!-- Customer Preferences & Dates -->
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs border-t border-slate-800 pt-3">
+                                <div><span class="text-slate-400 font-bold block text-[10px] uppercase">Fav Restaurant</span> <span class="text-white font-bold">${selectedInsight.favRestaurant}</span></div>
+                                <div><span class="text-slate-400 font-bold block text-[10px] uppercase">Fav Category</span> <span class="text-white font-bold">${selectedInsight.favCategory}</span></div>
+                                <div><span class="text-slate-400 font-bold block text-[10px] uppercase">First Order Date</span> <span class="text-slate-300 font-mono">${selectedInsight.firstOrderDate}</span></div>
+                                <div><span class="text-slate-400 font-bold block text-[10px] uppercase">Last Order Date</span> <span class="text-slate-300 font-mono">${selectedInsight.lastOrderDate}</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Order History Table -->
+                        <div class="space-y-2 pt-2">
+                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                                <i class="fa-solid fa-clock-rotate-left text-indigo-600 mr-1.5"></i>Order History (${selectedInsight.customerOrders.length} orders)
+                            </h4>
+                            <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                                <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                                    <thead>
+                                        <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                            <th class="p-3">Date</th>
+                                            <th class="p-3">Order ID</th>
+                                            <th class="p-3">Restaurant</th>
+                                            <th class="p-3">Category</th>
+                                            <th class="p-3">Rate</th>
+                                            <th class="p-3">Delivery</th>
+                                            <th class="p-3">Total Amount</th>
+                                            <th class="p-3">Payment Mode</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        ${selectedInsight.customerOrders.map(item => {
+                                            const tot = (Number(item.vendorRate || 0) + Number(item.deliveryCharge || 0));
+                                            return `
+                                                <tr>
+                                                    <td class="p-3 font-medium text-slate-500">${item.date}</td>
+                                                    <td class="p-3 font-mono font-bold text-blue-600">${item.orderId}</td>
+                                                    <td class="p-3 font-bold text-slate-800">${item.vendor}</td>
+                                                    <td class="p-3 text-slate-600">${item.category}</td>
+                                                    <td class="p-3">₹${Number(item.vendorRate || 0).toFixed(2)}</td>
+                                                    <td class="p-3">₹${Number(item.deliveryCharge || 0).toFixed(2)}</td>
+                                                    <td class="p-3 font-extrabold text-slate-900">₹${tot.toFixed(2)}</td>
+                                                    <td class="p-3">${item.paymentMode || 'Cash'}</td>
+                                                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${item.orderStatus === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${item.orderStatus || 'Delivered'}</span></td>
+                                                    <td class="p-3 space-x-1">
+                                                        <button type="button" onclick="showOrderReceipt('${item.id}')" class="text-slate-400 hover:text-emerald-600 transition p-1" title="View Receipt"><i class="fa-solid fa-receipt"></i></button>
+                                                        <button type="button" onclick="reorderCustomerLast('${item.id || item.orderId}')" class="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold transition inline-flex items-center space-x-1 text-[10px]">
+                                                            <i class="fa-solid fa-rotate-right"></i><span>Reorder</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="p-8 text-center text-slate-400 text-xs">Search for a customer above or select from the directory to view complete analytics & profile.</div>
+                    `}
+                </div>
+
+                <!-- Customer Directory Table -->
+                <div class="erp-card p-5 space-y-3">
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">All Customer Directory</h4>
+                    <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                        <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                            <thead>
+                                <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                    <th class="p-3">Customer Name</th>
+                                    <th class="p-3">Mobile Number</th>
+                                    <th class="p-3">Total Orders</th>
+                                    <th class="p-3">Total Spent</th>
+                                    <th class="p-3">Avg Order Value</th>
+                                    <th class="p-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${filteredList.map(c => {
+                                    const avg = c.orders.length > 0 ? (c.totalSpend / c.orders.length) : 0;
+                                    return `
+                                        <tr class="hover:bg-slate-50 cursor-pointer" onclick="selectCustomerForAnalytics('${c.cleanMobile || c.name}')">
+                                            <td class="p-3 font-bold text-slate-800">${c.name}</td>
+                                            <td class="p-3 font-mono text-slate-600">${c.mobile || '-'}</td>
+                                            <td class="p-3 font-semibold">${c.orders.length}</td>
+                                            <td class="p-3 font-extrabold text-emerald-700">₹${c.totalSpend.toFixed(2)}</td>
+                                            <td class="p-3 text-slate-600">₹${avg.toFixed(2)}</td>
+                                            <td class="p-3">
+                                                <button type="button" onclick="selectCustomerForAnalytics('${c.cleanMobile || c.name}')" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-bold text-[10px] transition">
+                                                    View Profile
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectCustomerForAnalytics(mobileOrName) {
+            currentSelectedCustomerMobile = mobileOrName;
+            renderCustomerAnalytics();
         }
 
         function openCustomerHistoryModal(mobileQuery, nameQuery = '') {
