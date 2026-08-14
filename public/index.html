@@ -681,6 +681,11 @@
                             <i class="fa-solid fa-gear"></i>
                         </button>
                         
+                        <!-- Global Calculator Button -->
+                        <button onclick="toggleCalculatorDrawer()" class="w-9 h-9 flex items-center justify-center hover:bg-amber-100/70 hover:text-amber-800 rounded-xl transition text-slate-600 border border-slate-200 bg-slate-50" title="Calculator Panel (ERP Utility)">
+                            <i class="fa-solid fa-calculator text-xs text-amber-600"></i>
+                        </button>
+                        
                         <!-- Global Notification Center Dropdown -->
                         <div class="relative">
                             <button id="headerNotificationBtn" onclick="toggleNotificationMenu()" class="w-9 h-9 flex items-center justify-center hover:bg-slate-100 rounded-xl transition text-slate-600 relative" title="Global Notifications">
@@ -1788,6 +1793,89 @@
 
             </div>
         </main>
+
+        <!-- GLOBAL CALCULATOR DRAWER OVERLAY -->
+        <div id="calculatorDrawerBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden transition-opacity duration-300" onclick="closeCalculatorDrawer()"></div>
+        <div id="calculatorDrawer" class="fixed top-0 bottom-0 right-0 w-full sm:w-96 bg-zinc-950 text-white z-50 shadow-2xl flex flex-col border-l border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out">
+            <!-- Header -->
+            <div class="p-4 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-calculator text-xs"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-white tracking-wide uppercase">ERP CALCULATOR</h3>
+                        <p class="text-[10px] text-zinc-400">Quick Calculations & History</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleCalcHistory()" class="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-[10px] font-bold transition flex items-center space-x-1" title="Toggle History">
+                        <i class="fa-solid fa-clock-rotate-left"></i><span>History</span>
+                    </button>
+                    <button onclick="closeCalculatorDrawer()" class="w-7 h-7 flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg transition">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- History Drawer (Toggleable) -->
+            <div id="calcHistorySection" class="hidden p-3 bg-zinc-900/90 border-b border-zinc-800 max-h-40 overflow-y-auto space-y-1.5 text-xs font-mono">
+                <div class="flex items-center justify-between text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-1">
+                    <span>Recent Calculations</span>
+                    <button onclick="clearCalcHistory()" class="text-rose-400 hover:underline">Clear History</button>
+                </div>
+                <div id="calcHistoryList" class="space-y-1 text-right text-zinc-300 divide-y divide-zinc-800"></div>
+            </div>
+
+            <!-- Display Area -->
+            <div class="p-4 bg-zinc-950 flex flex-col justify-end border-b border-zinc-800 min-h-[110px] text-right font-mono">
+                <div id="calcExpressionDisplay" class="text-xs text-zinc-400 min-h-[1.25rem] truncate"></div>
+                <div id="calcResultDisplay" class="text-3xl font-extrabold text-amber-400 truncate tracking-tight">0</div>
+            </div>
+
+            <!-- Quick Actions Bar -->
+            <div class="p-3 bg-zinc-900/60 border-b border-zinc-800 grid grid-cols-4 gap-1.5 text-[10px] font-bold">
+                <button onclick="calcQuickAction('delivery')" class="py-1.5 bg-zinc-800 hover:bg-amber-500/20 hover:text-amber-300 text-zinc-300 rounded-lg transition border border-zinc-700/60" title="Add Delivery Charge (+40)">+ ₹40 Del</button>
+                <button onclick="calcQuickAction('discount')" class="py-1.5 bg-zinc-800 hover:bg-amber-500/20 hover:text-amber-300 text-zinc-300 rounded-lg transition border border-zinc-700/60" title="Subtract 10% Discount">- 10% Disc</button>
+                <button onclick="calcQuickAction('percent')" class="py-1.5 bg-zinc-800 hover:bg-amber-500/20 hover:text-amber-300 text-zinc-300 rounded-lg transition border border-zinc-700/60" title="Convert to %">% Percent</button>
+                <button onclick="calcQuickAction('round')" class="py-1.5 bg-zinc-800 hover:bg-amber-500/20 hover:text-amber-300 text-zinc-300 rounded-lg transition border border-zinc-700/60" title="Round to whole integer">Round Off</button>
+            </div>
+
+            <!-- Keypad Grid -->
+            <div class="p-4 flex-1 grid grid-cols-4 gap-2 text-sm font-bold bg-zinc-950">
+                <button onclick="calcClear()" class="p-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-xl transition border border-rose-500/30">C</button>
+                <button onclick="calcToggleSign()" class="p-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl transition border border-zinc-700">±</button>
+                <button onclick="calcInputOperator('%')" class="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl transition border border-amber-500/30">%</button>
+                <button onclick="calcInputOperator('÷')" class="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl transition border border-amber-500/30">÷</button>
+
+                <button onclick="calcInputDigit('7')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">7</button>
+                <button onclick="calcInputDigit('8')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">8</button>
+                <button onclick="calcInputDigit('9')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">9</button>
+                <button onclick="calcInputOperator('×')" class="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl transition border border-amber-500/30">×</button>
+
+                <button onclick="calcInputDigit('4')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">4</button>
+                <button onclick="calcInputDigit('5')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">5</button>
+                <button onclick="calcInputDigit('6')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">6</button>
+                <button onclick="calcInputOperator('-')" class="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl transition border border-amber-500/30">-</button>
+
+                <button onclick="calcInputDigit('1')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">1</button>
+                <button onclick="calcInputDigit('2')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">2</button>
+                <button onclick="calcInputDigit('3')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">3</button>
+                <button onclick="calcInputOperator('+')" class="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl transition border border-amber-500/30">+</button>
+
+                <button onclick="calcInputDigit('0')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">0</button>
+                <button onclick="calcInputDigit('00')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">00</button>
+                <button onclick="calcInputDigit('.')" class="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl transition border border-zinc-800">.</button>
+                <button onclick="calcCalculate()" class="p-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-zinc-950 font-black rounded-xl transition shadow-lg shadow-amber-500/20">=</button>
+            </div>
+
+            <div class="p-3 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center text-xs">
+                <button onclick="calcBackspace()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition font-semibold flex items-center space-x-1.5">
+                    <i class="fa-solid fa-delete-left text-xs"></i><span>Backspace</span>
+                </button>
+                <span class="text-[10px] text-zinc-500">Press <kbd class="px-1 py-0.5 bg-zinc-800 rounded text-zinc-300 font-mono">Esc</kbd> to close</span>
+            </div>
+        </div>
     </div>
 
     <!-- DAILY ENTRY MODAL -->
@@ -7019,6 +7107,233 @@
             `;
         }
         /* ================= END 13 FEATURE ENHANCEMENTS ================= */
+
+        // ====================================================
+        // GLOBAL CALCULATOR DRAWER ENGINE & HANDLERS
+        // ====================================================
+        let calcExpression = '';
+        let calcCurrentInput = '0';
+        let calcIsEvaluated = false;
+        let calcHistory = [];
+
+        function toggleCalculatorDrawer() {
+            const backdrop = document.getElementById('calculatorDrawerBackdrop');
+            const drawer = document.getElementById('calculatorDrawer');
+            if (!drawer || !backdrop) return;
+
+            const isHidden = drawer.classList.contains('translate-x-full');
+            if (isHidden) {
+                backdrop.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+            } else {
+                closeCalculatorDrawer();
+            }
+        }
+
+        function closeCalculatorDrawer() {
+            const backdrop = document.getElementById('calculatorDrawerBackdrop');
+            const drawer = document.getElementById('calculatorDrawer');
+            if (backdrop) backdrop.classList.add('hidden');
+            if (drawer) drawer.classList.add('translate-x-full');
+        }
+
+        function updateCalcDisplay() {
+            const exprEl = document.getElementById('calcExpressionDisplay');
+            const resEl = document.getElementById('calcResultDisplay');
+            if (exprEl) exprEl.innerText = calcExpression;
+            if (resEl) resEl.innerText = calcCurrentInput;
+        }
+
+        function calcInputDigit(digit) {
+            if (calcIsEvaluated) {
+                calcCurrentInput = digit === '00' ? '0' : digit;
+                calcExpression = '';
+                calcIsEvaluated = false;
+                updateCalcDisplay();
+                return;
+            }
+            if (calcCurrentInput === '0' && digit !== '.') {
+                calcCurrentInput = digit === '00' ? '0' : digit;
+            } else {
+                if (digit === '.' && calcCurrentInput.includes('.')) return;
+                calcCurrentInput += digit;
+            }
+            updateCalcDisplay();
+        }
+
+        function calcInputOperator(op) {
+            if (calcIsEvaluated) {
+                calcExpression = calcCurrentInput + ' ' + op + ' ';
+                calcCurrentInput = '0';
+                calcIsEvaluated = false;
+                updateCalcDisplay();
+                return;
+            }
+            calcExpression += calcCurrentInput + ' ' + op + ' ';
+            calcCurrentInput = '0';
+            updateCalcDisplay();
+        }
+
+        function calcToggleSign() {
+            if (calcCurrentInput === '0' || calcCurrentInput === 'Cannot divide by 0') return;
+            if (calcCurrentInput.startsWith('-')) {
+                calcCurrentInput = calcCurrentInput.substring(1);
+            } else {
+                calcCurrentInput = '-' + calcCurrentInput;
+            }
+            updateCalcDisplay();
+        }
+
+        function calcBackspace() {
+            if (calcIsEvaluated) return;
+            if (calcCurrentInput.length > 1) {
+                calcCurrentInput = calcCurrentInput.slice(0, -1);
+            } else {
+                calcCurrentInput = '0';
+            }
+            updateCalcDisplay();
+        }
+
+        function calcClear() {
+            calcExpression = '';
+            calcCurrentInput = '0';
+            calcIsEvaluated = false;
+            updateCalcDisplay();
+        }
+
+        function calcCalculate() {
+            let fullExpr = calcExpression + calcCurrentInput;
+            if (!fullExpr || calcIsEvaluated) return;
+
+            try {
+                let sanitized = fullExpr
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/%/g, '/100');
+
+                // Prevent division by zero
+                if (/\/[\s]*0(\.0*)?($|[^0-9\.])/.test(sanitized)) {
+                    calcCurrentInput = 'Cannot divide by 0';
+                    calcExpression = fullExpr + ' =';
+                    calcIsEvaluated = true;
+                    updateCalcDisplay();
+                    return;
+                }
+
+                let res = Function('return (' + sanitized + ')')();
+                if (!Number.isFinite(res)) {
+                    calcCurrentInput = 'Error';
+                    updateCalcDisplay();
+                    return;
+                }
+
+                res = Math.round(res * 1000000) / 1000000;
+                const resStr = String(res);
+
+                calcHistory.unshift({ expr: fullExpr, result: resStr });
+                if (calcHistory.length > 30) calcHistory.pop();
+                renderCalcHistory();
+
+                calcExpression = fullExpr + ' =';
+                calcCurrentInput = resStr;
+                calcIsEvaluated = true;
+                updateCalcDisplay();
+            } catch (e) {
+                calcCurrentInput = 'Error';
+                updateCalcDisplay();
+            }
+        }
+
+        function calcQuickAction(action) {
+            if (action === 'delivery') {
+                calcInputOperator('+');
+                calcInputDigit('4');
+                calcInputDigit('0');
+            } else if (action === 'discount') {
+                calcInputOperator('-');
+                calcInputDigit('1');
+                calcInputDigit('0');
+                calcInputOperator('%');
+            } else if (action === 'percent') {
+                calcInputOperator('%');
+            } else if (action === 'round') {
+                let val = Number(calcCurrentInput);
+                if (!isNaN(val)) {
+                    calcCurrentInput = String(Math.round(val));
+                    updateCalcDisplay();
+                }
+            }
+        }
+
+        function toggleCalcHistory() {
+            const sec = document.getElementById('calcHistorySection');
+            if (sec) sec.classList.toggle('hidden');
+        }
+
+        function renderCalcHistory() {
+            const list = document.getElementById('calcHistoryList');
+            if (!list) return;
+            if (calcHistory.length === 0) {
+                list.innerHTML = `<div class="text-zinc-500 text-center py-2 text-[10px]">No history yet</div>`;
+                return;
+            }
+            list.innerHTML = calcHistory.map(item => `
+                <div onclick="selectCalcHistory('${item.result}')" class="py-1 px-1.5 hover:bg-zinc-800 rounded cursor-pointer transition flex justify-between items-center">
+                    <span class="text-zinc-400 text-[10px]">${item.expr} =</span>
+                    <span class="text-amber-400 font-bold">${item.result}</span>
+                </div>
+            `).join('');
+        }
+
+        function clearCalcHistory() {
+            calcHistory = [];
+            renderCalcHistory();
+        }
+
+        function selectCalcHistory(val) {
+            calcCurrentInput = String(val);
+            calcIsEvaluated = true;
+            updateCalcDisplay();
+        }
+
+        // Global Keyboard Event Listener for Calculator
+        window.addEventListener('keydown', function(e) {
+            const drawer = document.getElementById('calculatorDrawer');
+            if (!drawer || drawer.classList.contains('translate-x-full')) return;
+
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                if (e.key === 'Escape') {
+                    closeCalculatorDrawer();
+                }
+                return;
+            }
+
+            if (e.key >= '0' && e.key <= '9') {
+                calcInputDigit(e.key);
+            } else if (e.key === '.') {
+                calcInputDigit('.');
+            } else if (e.key === '+') {
+                calcInputOperator('+');
+            } else if (e.key === '-') {
+                calcInputOperator('-');
+            } else if (e.key === '*') {
+                calcInputOperator('×');
+            } else if (e.key === '/') {
+                e.preventDefault();
+                calcInputOperator('÷');
+            } else if (e.key === '%') {
+                calcInputOperator('%');
+            } else if (e.key === 'Enter' || e.key === '=') {
+                e.preventDefault();
+                calcCalculate();
+            } else if (e.key === 'Backspace') {
+                calcBackspace();
+            } else if (e.key === 'Delete' || e.key.toLowerCase() === 'c') {
+                calcClear();
+            } else if (e.key === 'Escape') {
+                closeCalculatorDrawer();
+            }
+        });
     </script>
 </body>
 </html>
