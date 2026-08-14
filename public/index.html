@@ -681,10 +681,15 @@
 
                     <!-- Notifications & Settings Quick Icons -->
                     <div class="flex items-center space-x-2 text-slate-500">
-                        <div class="hidden md:flex items-center space-x-1 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-medium text-slate-600 border border-slate-200">
-                            <i class="fa-regular fa-calendar mr-1.5 text-blue-600"></i>
-                            <span id="topbarCurrentDate">--</span>
+                        <!-- CLASSIC DIGITAL CLOCK HEADER COMPONENT -->
+                        <div id="classicDigitalClockContainer" class="flex items-center space-x-2 px-2.5 py-1 bg-zinc-950 text-white rounded-xl border border-zinc-800 shadow-sm font-mono leading-tight">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse hidden sm:block"></div>
+                            <div class="text-right">
+                                <div id="classicDigitalClockTime" class="text-xs sm:text-sm font-extrabold text-amber-400 tracking-wider">--:--:-- --</div>
+                                <div id="classicDigitalClockDate" class="text-[9px] sm:text-[10px] text-zinc-400 font-sans tracking-tight">-- --- ---- | ---</div>
+                            </div>
                         </div>
+
                         <button onclick="switchTab('settings')" class="w-9 h-9 flex items-center justify-center hover:bg-slate-100 rounded-xl transition text-slate-600" title="Settings">
                             <i class="fa-solid fa-gear"></i>
                         </button>
@@ -8484,6 +8489,54 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ====================================================
+        // CLASSIC DIGITAL CLOCK ENGINE (READ-ONLY DISPLAY)
+        // ====================================================
+        let globalClockInterval = null;
+
+        function updateClassicDigitalClock() {
+            const now = new Date();
+            
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            const strHours = String(hours).padStart(2, '0');
+            
+            const timeStr = `${strHours}:${minutes}:${seconds} ${ampm}`;
+
+            const day = String(now.getDate()).padStart(2, '0');
+            const months = ['Aug', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[now.getMonth() + 1];
+            const year = now.getFullYear();
+            
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[now.getDay()];
+
+            const dateStr = `${day} ${month} ${year} | ${dayName}`;
+
+            const timeEl = document.getElementById('classicDigitalClockTime');
+            const dateEl = document.getElementById('classicDigitalClockDate');
+            
+            if (timeEl) timeEl.innerText = timeStr;
+            if (dateEl) dateEl.innerText = dateStr;
+        }
+
+        function initClassicDigitalClock() {
+            updateClassicDigitalClock();
+            if (!globalClockInterval) {
+                globalClockInterval = setInterval(updateClassicDigitalClock, 1000);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initClassicDigitalClock);
+        } else {
+            initClassicDigitalClock();
         }
     </script>
 </body>
