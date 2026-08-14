@@ -1799,6 +1799,30 @@
                     </div>
                 </div>
 
+                <!-- DATA INTEGRITY CHECKER -->
+                <div id="tab-dataIntegrity" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-5 space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                    <i class="fa-solid fa-shield-halved text-amber-600 mr-2"></i>Data Integrity Checker & Health Monitor
+                                </h3>
+                                <p class="text-xs text-slate-500">Read-only automated scanner for detecting data anomalies, payment mismatches, and schema health</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="runDataIntegrityCheck()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-magnifying-glass font-black"></i><span>Run Check Again</span>
+                                </button>
+                                <button onclick="exportDataIntegrityCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-file-csv font-black"></i><span>Export CSV</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="dataIntegrityContent" class="space-y-6"></div>
+                    </div>
+                </div>
+
             </div>
         </main>
 
@@ -2750,7 +2774,11 @@
                     { id: 'expenseMgmt', label: 'Expenses', icon: 'fa-file-invoice-dollar' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' },
-                    { id: 'monthlyPNL', label: 'Monthly P&L', icon: 'fa-chart-line' }
+                    { id: 'monthlyPNL', label: 'Monthly P&L', icon: 'fa-chart-line' },
+                    { id: 'restaurantPerformance', label: 'Restaurant Analytics', icon: 'fa-store' },
+                    { id: 'riderPerformance', label: 'Rider Analytics', icon: 'fa-user-astronaut' },
+                    { id: 'customerAnalytics', label: 'Customer Analytics', icon: 'fa-users' },
+                    { id: 'dataIntegrity', label: 'Data Integrity', icon: 'fa-shield-halved' }
                 ];
             } else {
                 items = [
@@ -2841,6 +2869,7 @@
                 restaurantPerformance: 'Restaurant Performance Analytics',
                 riderPerformance: 'Rider Performance Analytics',
                 customerAnalytics: 'Customer Analytics & Insights',
+                dataIntegrity: 'Data Integrity Checker & Health Monitor',
                 recycleBin: 'Recycle Bin',
                 auditLog: 'System Audit Log',
                 adminMgmt: 'Administrator Management',
@@ -2864,6 +2893,7 @@
             if (tabId === 'restaurantPerformance') renderRestaurantPerformance();
             if (tabId === 'riderPerformance') renderRiderPerformance();
             if (tabId === 'customerAnalytics') renderCustomerAnalytics();
+            if (tabId === 'dataIntegrity') runDataIntegrityCheck();
             if (tabId === 'recycleBin') loadRecycleBin();
             if (tabId === 'auditLog') loadAuditLog();
             if (tabId === 'adminMgmt') loadAdmins();
@@ -7955,6 +7985,505 @@
             if (pmInput) pmInput.value = entry.paymentMode || 'Cash';
 
             if (typeof calculateProfit === 'function') calculateProfit();
+        }
+        // ====================================================
+        // DATA INTEGRITY CHECKER & MONITOR (READ-ONLY)
+        // ====================================================
+        let currentIntegrityIssues = [];
+        let currentIntegrityFilterSeverity = 'All';
+        let currentIntegrityFilterModule = 'All';
+
+        function runDataIntegrityCheck() {
+            const container = document.getElementById('dataIntegrityContent');
+            if (!container) return;
+
+            const issues = [];
+            const entries = db.entries || [];
+            const restaurants = db.restaurants || [];
+            const deliveryBoys = db.deliveryBoys || [];
+            const expenses = db.expenses || [];
+            const restSettlements = db.restaurantSettlements || [];
+            const riderSettlements = db.riderSettlements || [];
+            const dayCloseHistory = db.dayCloseHistory || [];
+
+            const totalRecords = entries.length + restaurants.length + deliveryBoys.length + expenses.length + restSettlements.length + riderSettlements.length + dayCloseHistory.length;
+
+            // A. Duplicate Order IDs & Order Validation
+            const orderIdMap = {};
+            entries.forEach(e => {
+                const oid = (e.orderId || e.id || '').trim();
+                if (!oid) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Orders',
+                        recordId: e.id || 'N/A',
+                        issue: 'Missing Order ID',
+                        value: '-',
+                        action: 'Review order record and assign unique Order ID'
+                    });
+                } else {
+                    orderIdMap[oid] = (orderIdMap[oid] || 0) + 1;
+                }
+
+                if (!e.date) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Missing Order Date',
+                        value: '-',
+                        action: 'Add valid order date'
+                    });
+                }
+
+                if (!e.vendor) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Missing Restaurant/Vendor Name',
+                        value: '-',
+                        action: 'Assign restaurant to order entry'
+                    });
+                }
+
+                const vRate = Number(e.vendorRate || 0);
+                const dCharge = Number(e.deliveryCharge || 0);
+                if (vRate < 0) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Negative Vendor Rate Amount',
+                        value: `₹${vRate}`,
+                        action: 'Review vendor rate amount'
+                    });
+                }
+                if (dCharge < 0) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Negative Delivery Charge',
+                        value: `₹${dCharge}`,
+                        action: 'Review delivery charge amount'
+                    });
+                }
+
+                const onlineRate = Number(e.onlineRate || 0);
+                const recordedProfit = Number(e.profit || 0);
+                const expectedProfit = (onlineRate + dCharge - vRate);
+                if (Math.abs(recordedProfit - expectedProfit) > 0.01 && (onlineRate > 0 || recordedProfit > 0)) {
+                    issues.push({
+                        severity: 'Info',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Profit calculation variance',
+                        value: `Recorded: ₹${recordedProfit.toFixed(2)}, Expected: ₹${expectedProfit.toFixed(2)}`,
+                        action: 'Review rates and verify profit calculation formula'
+                    });
+                }
+
+                const totalAmt = vRate + dCharge;
+                const cash = Number(e.cash || 0);
+                const upi = Number(e.upi || 0);
+                const paymentSum = cash + upi;
+
+                if (e.orderStatus === 'Paid' && paymentSum > 0 && Math.abs(paymentSum - totalAmt) > 0.01) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Payment Cash/UPI split mismatch',
+                        value: `Cash ₹${cash} + UPI ₹${upi} = ₹${paymentSum} (Order Total: ₹${totalAmt})`,
+                        action: 'Review Cash/UPI payment split for order'
+                    });
+                }
+
+                if (cash < 0 || upi < 0) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Orders',
+                        recordId: oid || e.id,
+                        issue: 'Negative Payment Amount',
+                        value: `Cash ₹${cash}, UPI ₹${upi}`,
+                        action: 'Correct negative cash/upi values'
+                    });
+                }
+            });
+
+            Object.keys(orderIdMap).forEach(oid => {
+                if (orderIdMap[oid] > 1) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Orders',
+                        recordId: oid,
+                        issue: 'Duplicate Order ID',
+                        value: `Appears ${orderIdMap[oid]} times in orders database`,
+                        action: 'Review duplicate order entries and reassign unique Order IDs'
+                    });
+                }
+            });
+
+            // B. Restaurant Settlement Mismatches
+            const restSettleIdMap = {};
+            restSettlements.forEach(s => {
+                const sid = (s.id || '').trim();
+                if (sid) {
+                    restSettleIdMap[sid] = (restSettleIdMap[sid] || 0) + 1;
+                }
+
+                const pending = Number(s.pendingAmount || 0);
+                const paid = Number(s.paidAmount || 0);
+                const outstanding = Number(s.outstandingAmount !== undefined ? s.outstandingAmount : (pending - paid));
+
+                if (paid < 0 || pending < 0) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Settlements',
+                        recordId: sid || s.vendor,
+                        issue: 'Negative Settlement Amount',
+                        value: `Pending ₹${pending}, Paid ₹${paid}`,
+                        action: 'Review restaurant settlement amounts'
+                    });
+                }
+
+                if (outstanding < 0) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Settlements',
+                        recordId: sid || s.vendor,
+                        issue: 'Outstanding amount below zero',
+                        value: `Outstanding ₹${outstanding.toFixed(2)}`,
+                        action: 'Check paid amount vs pending balance'
+                    });
+                }
+
+                if (Math.abs((paid + outstanding) - pending) > 0.01 && pending > 0) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Settlements',
+                        recordId: sid || s.vendor,
+                        issue: 'Settlement sum mismatch',
+                        value: `Paid ₹${paid} + Outstanding ₹${outstanding} != Pending ₹${pending}`,
+                        action: 'Verify paid amount and outstanding balance'
+                    });
+                }
+            });
+
+            // C. Rider Settlement Mismatches
+            riderSettlements.forEach(s => {
+                const sid = (s.id || '').trim();
+                const netPay = Number(s.netPayable || 0);
+                const earnings = Number(s.earnings || 0);
+
+                if (netPay < 0 || earnings < 0) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Settlements',
+                        recordId: sid || s.rider,
+                        issue: 'Negative Rider Payout Amount',
+                        value: `Earnings ₹${earnings}, Net Payable ₹${netPay}`,
+                        action: 'Review rider delivery earnings and deductions'
+                    });
+                }
+            });
+
+            // D. Restaurant Directory Checks
+            const restNameMap = {};
+            restaurants.forEach(r => {
+                const name = (r.name || '').trim();
+                if (!name) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Restaurants',
+                        recordId: r.id || 'N/A',
+                        issue: 'Missing Restaurant Name',
+                        value: '-',
+                        action: 'Assign name to restaurant entry'
+                    });
+                } else {
+                    restNameMap[name.toLowerCase()] = (restNameMap[name.toLowerCase()] || 0) + 1;
+                }
+                if (!r.mobile) {
+                    issues.push({
+                        severity: 'Info',
+                        module: 'Restaurants',
+                        recordId: name || r.id,
+                        issue: 'Missing Restaurant Contact Number',
+                        value: '-',
+                        action: 'Add contact mobile number for restaurant'
+                    });
+                }
+            });
+
+            Object.keys(restNameMap).forEach(name => {
+                if (restNameMap[name] > 1) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Restaurants',
+                        recordId: name,
+                        issue: 'Duplicate Restaurant Name',
+                        value: `Appears ${restNameMap[name]} times`,
+                        action: 'Ensure restaurant names are unique'
+                    });
+                }
+            });
+
+            // E. Delivery Boy Directory Checks
+            const riderNameMap = {};
+            deliveryBoys.forEach(d => {
+                const name = (d.name || '').trim();
+                if (!name) {
+                    issues.push({
+                        severity: 'Critical',
+                        module: 'Riders',
+                        recordId: d.id || 'N/A',
+                        issue: 'Missing Rider Name',
+                        value: '-',
+                        action: 'Assign name to delivery boy entry'
+                    });
+                } else {
+                    riderNameMap[name.toLowerCase()] = (riderNameMap[name.toLowerCase()] || 0) + 1;
+                }
+            });
+
+            Object.keys(riderNameMap).forEach(name => {
+                if (riderNameMap[name] > 1) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Riders',
+                        recordId: name,
+                        issue: 'Duplicate Rider Name',
+                        value: `Appears ${riderNameMap[name]} times`,
+                        action: 'Ensure rider names are unique'
+                    });
+                }
+            });
+
+            // F. Expense Checks
+            expenses.forEach(ex => {
+                const amt = Number(ex.amount || 0);
+                if (amt <= 0) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Expenses',
+                        recordId: ex.id || 'N/A',
+                        issue: 'Invalid or Zero Expense Amount',
+                        value: `₹${amt}`,
+                        action: 'Verify expense amount'
+                    });
+                }
+                if (!ex.date) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Expenses',
+                        recordId: ex.id || 'N/A',
+                        issue: 'Missing Expense Date',
+                        value: '-',
+                        action: 'Add valid date to expense record'
+                    });
+                }
+            });
+
+            // G. Day Close History Checks
+            const dayCloseDateMap = {};
+            dayCloseHistory.forEach(dc => {
+                if (dc.date) {
+                    dayCloseDateMap[dc.date] = (dayCloseDateMap[dc.date] || 0) + 1;
+                }
+            });
+
+            Object.keys(dayCloseDateMap).forEach(date => {
+                if (dayCloseDateMap[date] > 1) {
+                    issues.push({
+                        severity: 'Warning',
+                        module: 'Day Close',
+                        recordId: date,
+                        issue: 'Duplicate Day Close Record',
+                        value: `Closed ${dayCloseDateMap[date]} times`,
+                        action: 'Review day close history logs'
+                    });
+                }
+            });
+
+            currentIntegrityIssues = issues;
+            renderIntegrityDashboard(totalRecords);
+        }
+
+        function renderIntegrityDashboard(totalRecords) {
+            const container = document.getElementById('dataIntegrityContent');
+            if (!container) return;
+
+            const issues = currentIntegrityIssues;
+            const criticalCount = issues.filter(i => i.severity === 'Critical').length;
+            const warningCount = issues.filter(i => i.severity === 'Warning').length;
+            const infoCount = issues.filter(i => i.severity === 'Info').length;
+            const totalIssues = issues.length;
+            const healthyCount = Math.max(0, totalRecords - totalIssues);
+
+            let filtered = issues;
+            if (currentIntegrityFilterSeverity !== 'All') {
+                filtered = filtered.filter(i => i.severity === currentIntegrityFilterSeverity);
+            }
+            if (currentIntegrityFilterModule !== 'All') {
+                filtered = filtered.filter(i => i.module === currentIntegrityFilterModule);
+            }
+
+            container.innerHTML = `
+                <!-- Overall Status Banner -->
+                <div class="p-4 rounded-2xl border ${totalIssues === 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900' : 'bg-amber-500/10 border-amber-500/30 text-amber-900'} flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl ${totalIssues === 0 ? 'bg-emerald-500 text-slate-950' : 'bg-amber-500 text-slate-950'} flex items-center justify-center font-extrabold text-lg shadow-sm">
+                            <i class="fa-solid ${totalIssues === 0 ? 'fa-check' : 'fa-triangle-exclamation'}"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-extrabold tracking-tight">${totalIssues === 0 ? '✓ No Data Integrity Issues Found' : '⚠ ' + totalIssues + ' Potential Data Issues Detected'}</h4>
+                            <p class="text-xs text-slate-600 font-medium">${totalRecords} total system records scanned across all modules (Read-Only Scan)</p>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1 bg-white rounded-full text-xs font-bold shadow-sm border border-slate-200">
+                        Scan Time: ${new Date().toLocaleTimeString()}
+                    </span>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div class="erp-card p-4 bg-rose-50/50 border border-rose-100">
+                        <span class="block text-[10px] font-bold text-rose-600 uppercase tracking-wider">Critical Issues</span>
+                        <span class="text-2xl font-extrabold text-rose-800">${criticalCount}</span>
+                    </div>
+                    <div class="erp-card p-4 bg-amber-50/50 border border-amber-100">
+                        <span class="block text-[10px] font-bold text-amber-600 uppercase tracking-wider">Warning Issues</span>
+                        <span class="text-2xl font-extrabold text-amber-800">${warningCount}</span>
+                    </div>
+                    <div class="erp-card p-4 bg-blue-50/50 border border-blue-100">
+                        <span class="block text-[10px] font-bold text-blue-600 uppercase tracking-wider">Info Issues</span>
+                        <span class="text-2xl font-extrabold text-blue-800">${infoCount}</span>
+                    </div>
+                    <div class="erp-card p-4 bg-emerald-50/50 border border-emerald-100">
+                        <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Healthy Records</span>
+                        <span class="text-2xl font-extrabold text-emerald-800">${healthyCount}</span>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="flex items-center justify-between flex-wrap gap-3 pt-2">
+                    <div class="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold text-slate-600">
+                        <button onclick="setIntegrityFilterSeverity('All')" class="px-3 py-1 rounded-lg ${currentIntegrityFilterSeverity === 'All' ? 'bg-white shadow-sm text-slate-900' : 'hover:bg-white/60'} transition">All (${totalIssues})</button>
+                        <button onclick="setIntegrityFilterSeverity('Critical')" class="px-3 py-1 rounded-lg ${currentIntegrityFilterSeverity === 'Critical' ? 'bg-white shadow-sm text-rose-700' : 'hover:bg-white/60'} transition">Critical (${criticalCount})</button>
+                        <button onclick="setIntegrityFilterSeverity('Warning')" class="px-3 py-1 rounded-lg ${currentIntegrityFilterSeverity === 'Warning' ? 'bg-white shadow-sm text-amber-700' : 'hover:bg-white/60'} transition">Warning (${warningCount})</button>
+                        <button onclick="setIntegrityFilterSeverity('Info')" class="px-3 py-1 rounded-lg ${currentIntegrityFilterSeverity === 'Info' ? 'bg-white shadow-sm text-blue-700' : 'hover:bg-white/60'} transition">Info (${infoCount})</button>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="font-bold text-slate-500">Filter Module:</span>
+                        <select onchange="setIntegrityFilterModule(this.value)" class="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="All" ${currentIntegrityFilterModule === 'All' ? 'selected' : ''}>All Modules</option>
+                            <option value="Orders" ${currentIntegrityFilterModule === 'Orders' ? 'selected' : ''}>Orders</option>
+                            <option value="Restaurants" ${currentIntegrityFilterModule === 'Restaurants' ? 'selected' : ''}>Restaurants</option>
+                            <option value="Riders" ${currentIntegrityFilterModule === 'Riders' ? 'selected' : ''}>Riders</option>
+                            <option value="Settlements" ${currentIntegrityFilterModule === 'Settlements' ? 'selected' : ''}>Settlements</option>
+                            <option value="Expenses" ${currentIntegrityFilterModule === 'Expenses' ? 'selected' : ''}>Expenses</option>
+                            <option value="Day Close" ${currentIntegrityFilterModule === 'Day Close' ? 'selected' : ''}>Day Close</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Detected Issues Table -->
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+                    ${filtered.length === 0 ? `
+                        <div class="p-8 text-center text-slate-400 text-xs">No issues match the selected filter criteria. All records healthy!</div>
+                    ` : `
+                        <table class="w-full text-left text-xs erp-table divide-y divide-slate-100">
+                            <thead>
+                                <tr class="text-slate-500 font-bold uppercase tracking-wider">
+                                    <th class="p-3.5">Severity</th>
+                                    <th class="p-3.5">Module</th>
+                                    <th class="p-3.5">Record ID</th>
+                                    <th class="p-3.5">Issue Description</th>
+                                    <th class="p-3.5">Current Value</th>
+                                    <th class="p-3.5">Recommended Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${filtered.map(item => {
+                                    let badgeClass = 'bg-blue-100 text-blue-700';
+                                    if (item.severity === 'Critical') badgeClass = 'bg-rose-100 text-rose-700';
+                                    else if (item.severity === 'Warning') badgeClass = 'bg-amber-100 text-amber-700';
+
+                                    return `
+                                        <tr>
+                                            <td class="p-3.5 font-bold"><span class="px-2.5 py-1 rounded-full text-[10px] uppercase ${badgeClass}">${item.severity}</span></td>
+                                            <td class="p-3.5 font-bold text-slate-700"><span class="px-2 py-0.5 rounded-md text-[10px] bg-slate-100 text-slate-700 font-bold border border-slate-200">${item.module}</span></td>
+                                            <td class="p-3.5 font-mono font-bold text-blue-600 cursor-pointer hover:underline" onclick="navigateToIntegrityRecord('${item.module}', '${item.recordId}')" title="Click to view record">${item.recordId}</td>
+                                            <td class="p-3.5 font-bold text-slate-800">${item.issue}</td>
+                                            <td class="p-3.5 font-mono text-slate-600">${item.value}</td>
+                                            <td class="p-3.5 text-slate-600 font-medium"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>${item.action}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+            `;
+        }
+
+        function setIntegrityFilterSeverity(sev) {
+            currentIntegrityFilterSeverity = sev;
+            renderIntegrityDashboard(db.entries.length + db.restaurants.length + db.deliveryBoys.length + db.expenses.length + db.restaurantSettlements.length + db.riderSettlements.length + db.dayCloseHistory.length);
+        }
+
+        function setIntegrityFilterModule(mod) {
+            currentIntegrityFilterModule = mod;
+            renderIntegrityDashboard(db.entries.length + db.restaurants.length + db.deliveryBoys.length + db.expenses.length + db.restaurantSettlements.length + db.riderSettlements.length + db.dayCloseHistory.length);
+        }
+
+        function navigateToIntegrityRecord(moduleName, recordId) {
+            if (moduleName === 'Orders') {
+                const entry = (db.entries || []).find(e => e.orderId === recordId || e.id === recordId);
+                if (entry) showOrderReceipt(entry.id);
+                else switchTab('dailyEntry');
+            } else if (moduleName === 'Restaurants') {
+                switchTab('vendors');
+            } else if (moduleName === 'Riders') {
+                switchTab('deliveryBoys');
+            } else if (moduleName === 'Settlements') {
+                switchTab('restaurantSettlement');
+            } else if (moduleName === 'Expenses') {
+                switchTab('expenseMgmt');
+            } else if (moduleName === 'Day Close') {
+                switchTab('dayClose');
+            }
+        }
+
+        function exportDataIntegrityCSV() {
+            if (currentIntegrityIssues.length === 0) {
+                alert('No integrity issues detected to export.');
+                return;
+            }
+
+            let csvContent = 'data:text/csv;charset=utf-8,Severity,Module,Record ID,Issue,Current Value,Recommended Action\n';
+            currentIntegrityIssues.forEach(item => {
+                const row = [
+                    `"${item.severity}"`,
+                    `"${item.module}"`,
+                    `"${item.recordId}"`,
+                    `"${String(item.issue).replace(/"/g, '""')}"`,
+                    `"${String(item.value).replace(/"/g, '""')}"`,
+                    `"${String(item.action).replace(/"/g, '""')}"`
+                ].join(',');
+                csvContent += row + '\n';
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `NAAV_ERP_Data_Integrity_Issues_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
