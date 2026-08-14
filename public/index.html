@@ -11,6 +11,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Leaflet.js FREE Map Engine (OpenStreetMap) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -1420,6 +1423,42 @@
 
                 <!-- 6. DELIVERY BOYS -->
                 <div id="tab-deliveryBoys" class="tab-content hidden space-y-6">
+                    <!-- LIVE RIDER LOCATION MAP SECTION -->
+                    <div class="erp-card p-5 space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                    <i class="fa-solid fa-location-dot text-rose-600 mr-2"></i>📍 Live Rider Location & GPS Tracking
+                                </h3>
+                                <p class="text-xs text-slate-500">Real-time GPS tracking for active delivery personnel</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <a href="/rider-location.html" target="_blank" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs border border-indigo-200 transition flex items-center space-x-1 shadow-sm">
+                                    <i class="fa-solid fa-mobile-screen-button"></i><span>Rider GPS Portal</span>
+                                </a>
+                                <button type="button" onclick="fetchRiderLocations(true)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition flex items-center space-x-1 border border-slate-200 shadow-sm">
+                                    <i class="fa-solid fa-rotate"></i><span>Refresh Map</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Map & Rider Cards Layout -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <!-- Leaflet Map Container -->
+                            <div class="lg:col-span-2 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm min-h-[360px] bg-slate-100">
+                                <div id="liveRiderMap" class="w-full h-full min-h-[360px] z-0"></div>
+                            </div>
+
+                            <!-- Rider Status & List Panel -->
+                            <div class="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Active Riders (<span id="liveRiderCount">0</span>)</h4>
+                                <div id="liveRiderList" class="space-y-2 text-xs">
+                                    <div class="p-4 text-center text-slate-400">Loading rider locations...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex justify-between items-center erp-card p-4">
                         <h3 class="font-bold text-slate-800 text-base">Delivery Boys Directory</h3>
                         <button onclick="openDeliveryBoyModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm shadow-blue-600/20 transition staff-allowed flex items-center space-x-1.5"><i class="fa-solid fa-plus text-[10px]"></i><span>Add Delivery Boy</span></button>
@@ -2892,7 +2931,12 @@
             if (tabId === 'vendors') loadRestaurants();
             if (tabId === 'riderEarnings') loadRiderEarnings();
             if (tabId === 'riderSettlement') initRiderSettlementTab();
-            if (tabId === 'deliveryBoys') loadDeliveryBoys();
+            if (tabId === 'deliveryBoys') {
+                loadDeliveryBoys();
+                startRiderLocationPolling();
+            } else {
+                stopRiderLocationPolling();
+            }
             if (tabId === 'reports') initReports();
             if (tabId === 'monthlyPNL') renderMonthlyPNL();
             if (tabId === 'restaurantPerformance') renderRestaurantPerformance();
@@ -8537,6 +8581,136 @@
             document.addEventListener('DOMContentLoaded', initClassicDigitalClock);
         } else {
             initClassicDigitalClock();
+        }
+
+        // ====================================================
+        // LIVE RIDER GPS TRACKING & LEAFLET MAP ENGINE
+        // ====================================================
+        let leafletRiderMap = null;
+        let leafletRiderMarkers = {};
+        let riderLocationPollInterval = null;
+
+        async function fetchRiderLocations(manual = false) {
+            try {
+                const res = await fetch('/api/rider-locations');
+                if (!res.ok) return;
+                const locations = await res.json();
+                renderRiderLocationsMap(locations);
+            } catch (e) {
+                console.error('Error fetching rider locations:', e);
+            }
+        }
+
+        function initRiderLocationMapIfNeeded() {
+            if (!leafletRiderMap && typeof L !== 'undefined') {
+                const mapEl = document.getElementById('liveRiderMap');
+                if (!mapEl) return;
+                
+                leafletRiderMap = L.map('liveRiderMap').setView([13.6268, 74.6912], 12);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(leafletRiderMap);
+            } else if (leafletRiderMap) {
+                leafletRiderMap.invalidateSize();
+            }
+        }
+
+        function renderRiderLocationsMap(locations) {
+            const countEl = document.getElementById('liveRiderCount');
+            const listEl = document.getElementById('liveRiderList');
+            
+            if (countEl) countEl.innerText = locations.length;
+
+            initRiderLocationMapIfNeeded();
+
+            if (listEl) {
+                if (locations.length === 0) {
+                    listEl.innerHTML = `<div class="p-4 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">No active rider locations recorded yet.<br><a href="/rider-location.html" target="_blank" class="text-blue-600 font-bold hover:underline mt-1 inline-block">Open Rider GPS Mobile Page</a></div>`;
+                } else {
+                    listEl.innerHTML = locations.map(r => {
+                        const statusBadge = r.isOnline 
+                            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">🟢 Online</span>`
+                            : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">⚪ Offline (${r.lastSeen})</span>`;
+
+                        return `
+                            <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-1 hover:border-blue-300 transition cursor-pointer" onclick="focusRiderOnMap(${r.latitude}, ${r.longitude}, '${r.riderId}')">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 text-xs">🚴 ${r.riderName}</span>
+                                    ${statusBadge}
+                                </div>
+                                <div class="text-[11px] font-mono text-slate-600 flex items-center justify-between">
+                                    <span>📍 Lat: ${Number(r.latitude).toFixed(4)}, Lng: ${Number(r.longitude).toFixed(4)}</span>
+                                    <span class="text-[10px] text-slate-400 font-sans">±${Math.round(r.accuracy || 0)}m</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+                                    <span>ID: ${r.riderId}</span>
+                                    <span>🕐 ${r.lastSeen}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            if (leafletRiderMap && typeof L !== 'undefined') {
+                const bounds = [];
+
+                locations.forEach(r => {
+                    const latLng = [r.latitude, r.longitude];
+                    bounds.push(latLng);
+
+                    const popupContent = `
+                        <div class="p-1 space-y-1 font-sans text-xs">
+                            <div class="font-bold text-slate-900 flex items-center justify-between gap-2">
+                                <span>🚴 ${r.riderName}</span>
+                                <span class="text-[10px] ${r.isOnline ? 'text-emerald-600 font-bold' : 'text-slate-500'}">${r.isOnline ? '🟢 Online' : '⚪ Offline'}</span>
+                            </div>
+                            <div class="font-mono text-[11px] text-slate-600">
+                                <div>Latitude: ${r.latitude}</div>
+                                <div>Longitude: ${r.longitude}</div>
+                                <div>Accuracy: ±${Math.round(r.accuracy || 0)}m</div>
+                            </div>
+                            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                                Updated: ${r.lastSeen} (${new Date(r.timestamp).toLocaleTimeString()})
+                            </div>
+                        </div>
+                    `;
+
+                    if (leafletRiderMarkers[r.riderId]) {
+                        leafletRiderMarkers[r.riderId].setLatLng(latLng).setPopupContent(popupContent);
+                    } else {
+                        const marker = L.marker(latLng).addTo(leafletRiderMap).bindPopup(popupContent);
+                        leafletRiderMarkers[r.riderId] = marker;
+                    }
+                });
+
+                if (bounds.length > 0) {
+                    leafletRiderMap.fitBounds(bounds, { maxZoom: 15, padding: [30, 30] });
+                }
+            }
+        }
+
+        function focusRiderOnMap(lat, lng, riderId) {
+            if (leafletRiderMap && leafletRiderMarkers[riderId]) {
+                leafletRiderMap.setView([lat, lng], 16);
+                leafletRiderMarkers[riderId].openPopup();
+            }
+        }
+
+        function startRiderLocationPolling() {
+            fetchRiderLocations();
+            if (!riderLocationPollInterval) {
+                riderLocationPollInterval = setInterval(fetchRiderLocations, 10000);
+            }
+        }
+
+        function stopRiderLocationPolling() {
+            if (riderLocationPollInterval) {
+                clearInterval(riderLocationPollInterval);
+                riderLocationPollInterval = null;
+            }
         }
     </script>
 </body>

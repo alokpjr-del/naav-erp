@@ -42,6 +42,7 @@ app.use('/api/delivery-boys', require('./src/routes/deliveryBoys'));
 app.use('/api/administrators', require('./src/routes/administrators'));
 app.use('/api/audit-log', require('./src/routes/auditLog'));
 app.use('/api/settings', require('./src/routes/settings'));
+app.use('/api', require('./src/routes/riderLocations'));
 
 // A typo'd or removed /api/* route used to silently fall through to the
 // SPA catch-all below and get back an HTML page with a 200 status instead
