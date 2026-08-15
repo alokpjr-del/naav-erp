@@ -30,10 +30,12 @@ router.post('/rider-login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Rider ID/Mobile and Password are required.' });
         }
 
-        // Query rider from PostgreSQL deliveryBoys table
+        const cleanMobile = cleanId.replace(/[^0-9]/g, '');
+
+        // Query rider from PostgreSQL deliveryBoys table with case-insensitive matching
         const result = await pool.query(
-            `SELECT * FROM "deliveryBoys" WHERE id = $1 OR mobile = $1 OR name = $1`,
-            [cleanId]
+            `SELECT * FROM "deliveryBoys" WHERE LOWER(id) = LOWER($1) OR (mobile IS NOT NULL AND mobile = $1) OR (mobile IS NOT NULL AND $2 != '' AND mobile = $2) OR LOWER(name) = LOWER($1)`,
+            [cleanId, cleanMobile]
         );
 
         if (result.rows.length === 0) {

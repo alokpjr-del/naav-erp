@@ -15,7 +15,7 @@ label{display:block;font-size:12px;font-weight:700;color:#475569;margin:0 0 6px}
 button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}.primary{background:#111827;color:#fff}.danger{background:#fee2e2;color:#991b1b}.secondary{background:#eef2ff;color:#3730a3}.outline{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 .location{display:none;margin-top:14px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;line-height:1.7}.location.show{display:block}.row{display:flex;justify-content:space-between;gap:10px;margin-bottom:2px}.value{font-weight:700;color:#0f172a}
 .notice{font-size:11px;color:#64748b;line-height:1.5;margin-top:16px;text-align:center}
-.error-banner{padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:12px;font-size:12px;font-weight:700;margin-bottom:14px;display:none}
+.error-banner{padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:14px;font-size:12px;font-weight:700;margin-bottom:14px;display:none;line-height:1.5}
 .welcome-banner{padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:16px;margin-bottom:14px}
 
 .diag-box{margin-top:16px;padding:14px;border-radius:14px;background:#1e293b;color:#f8fafc;font-size:11px;line-height:1.6;font-family:monospace}
@@ -27,17 +27,25 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
 <div class="wrap"><main class="card">
 <div class="brand"><div class="logo">N</div><div><h1>NAAV Rider Location</h1><p>Authenticated Location Sharing</p></div></div>
 
+<!-- WHATSAPP CONTENT:// PROTOCOL WARNING -->
+<div id="contentWarningBanner" style="display:none;padding:14px;background:#fffbebf0;border:2px solid #f59e0b;color:#92400e;border-radius:16px;margin-bottom:14px;font-size:12px;line-height:1.6;">
+    <strong style="font-size:14px;display:block;margin-bottom:4px;color:#b45309;">⚠️ Open in Chrome Browser</strong>
+    You are opening this page directly from WhatsApp file view (<code style="background:#fef3c7;padding:2px 4px;border-radius:4px;">content://</code>), which blocks GPS & API connections.<br><br>
+    <strong>Please open the official HTTPS link in Chrome:</strong><br>
+    <a href="https://naavaccount.onrender.com/rider-location.html" target="_blank" style="color:#b45309;font-weight:800;text-decoration:underline;word-break:break-all;">https://naavaccount.onrender.com/rider-location.html</a>
+</div>
+
 <div id="errorBanner" class="error-banner"></div>
 
 <!-- 1. LOGIN FORM VIEW -->
 <div id="loginSection">
-    <label>Rider ID / Mobile</label>
+    <label>Rider ID / Mobile Number</label>
     <input id="loginRiderId" placeholder="Enter Rider ID or Registered Mobile">
     
     <label>Password</label>
     <input type="password" id="loginPassword" placeholder="Enter Rider Password">
     
-    <button id="loginBtn" class="primary">🔑 Login to Rider Portal</button>
+    <button id="loginBtn" class="primary">🔐 Login & Start Location</button>
 </div>
 
 <!-- 2. AUTHENTICATED RIDER VIEW -->
@@ -67,11 +75,12 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
 <!-- SYSTEM DIAGNOSTICS PANEL -->
 <div id="diagBox" class="diag-box">
   <div class="diag-title">🔧 Rider GPS System Diagnostics</div>
+  <div class="row"><span>API Base URL:</span><span id="diagApiBase" class="value break-all">-</span></div>
+  <div class="row"><span>Current URL:</span><span id="diagUrl" class="value break-all">-</span></div>
   <div class="row"><span>Secure Context:</span><span id="diagSecure" class="value">-</span></div>
   <div class="row"><span>GPS API:</span><span id="diagGpsApi" class="value">-</span></div>
   <div class="row"><span>Permission:</span><span id="diagPerm" class="value">-</span></div>
   <div class="row"><span>Authenticated Session:</span><span id="diagAuthRider" class="value">-</span></div>
-  <div class="row"><span>Current URL:</span><span id="diagUrl" class="value break-all">-</span></div>
   <div class="row"><span>GPS Status / Error:</span><span id="diagErrorMsg" class="value">-</span></div>
   <div class="row"><span>Backend API Status:</span><span id="diagApiStatus" class="value">-</span></div>
   <div class="row"><span>Last API Response:</span><span id="diagApiResponse" class="value break-all">-</span></div>
@@ -86,10 +95,19 @@ let watchId = null;
 let currentRiderToken = sessionStorage.getItem('naav_rider_token') || '';
 let currentRiderObj = null;
 
-const LOCATION_API = '/api/rider-location';
-const LOGIN_API = '/api/rider-login';
-const LOGOUT_API = '/api/rider-logout';
-const SESSION_API = '/api/rider-session';
+// Determine API Base URL dynamically (prefer same-origin HTTP/HTTPS, fallback to Production)
+function getApiBaseUrl() {
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        return window.location.origin;
+    }
+    return 'https://naavaccount.onrender.com';
+}
+
+const API_BASE = getApiBaseUrl();
+const LOCATION_API = API_BASE + '/api/rider-location';
+const LOGIN_API = API_BASE + '/api/rider-login';
+const LOGOUT_API = API_BASE + '/api/rider-logout';
+const SESSION_API = API_BASE + '/api/rider-session';
 
 function showError(msg) {
     const el = $('errorBanner');
@@ -101,11 +119,22 @@ function showError(msg) {
     }
 }
 
+function checkContentSchemeWarning() {
+    const isContent = window.location.protocol === 'content:' || window.location.href.startsWith('content:');
+    const warningEl = $('contentWarningBanner');
+    if (isContent || !window.isSecureContext) {
+        if (warningEl) warningEl.style.display = 'block';
+    } else {
+        if (warningEl) warningEl.style.display = 'none';
+    }
+}
+
 function updateDiagnostics(fields = {}) {
     const isSecure = window.isSecureContext === true;
     const hasGps = !!(navigator && navigator.geolocation);
     
-    $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (HTTPS / Localhost)</span>' : '<span style="color:#ef4444">NO (Insecure HTTP)</span>';
+    if ($('diagApiBase')) $('diagApiBase').textContent = API_BASE;
+    $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (HTTPS)</span>' : '<span style="color:#ef4444">NO (Insecure Context / Content URI)</span>';
     $('diagGpsApi').innerHTML = hasGps ? '<span style="color:#22c55e">AVAILABLE</span>' : '<span style="color:#ef4444">NOT AVAILABLE</span>';
     $('diagUrl').textContent = window.location.href;
     
@@ -167,8 +196,16 @@ async function performRiderLogin() {
         showAuthenticatedUI();
         updateDiagnostics({ apiStatus: '200 Login OK', apiResponse: JSON.stringify(data) });
 
+        // Automatically trigger location permission & tracking upon login
+        startLocation();
+
     } catch (e) {
-        showError('Network error during login: ' + e.message);
+        let errorMsg = 'Unable to connect to NAAV server (' + API_BASE + '). Please check your internet connection.';
+        if (window.location.protocol === 'content:' || window.location.protocol === 'file:') {
+            errorMsg = 'Cannot connect from WhatsApp file view. Please open the link in Chrome: https://naavaccount.onrender.com/rider-location.html';
+        }
+        showError(errorMsg);
+        updateDiagnostics({ apiStatus: 'CONNECTION FAILED', apiResponse: e.message });
     }
 }
 
@@ -249,7 +286,7 @@ async function renderPosition(p) {
 
     updateDiagnostics({ errorMsg: 'GPS position acquired' });
 
-    // Payload (Note: backend ignores client riderId/name and reads authenticated token session!)
+    // Payload (Note: backend derives rider identity strictly from server-side session token!)
     const payload = {
         latitude: c.latitude,
         longitude: c.longitude,
@@ -298,7 +335,7 @@ function startLocation() {
     if (!currentRiderToken || !currentRiderObj) {
         return alert('Please login to start location sharing.');
     }
-    if (!window.isSecureContext) {
+    if (!window.isSecureContext && window.location.protocol !== 'http:') {
         setStatus(false, 'Insecure Context (HTTP)', 'Chrome disables GPS on non-secure HTTP. Use HTTPS.');
         return alert('Mobile browser geolocation requires HTTPS or localhost.');
     }
@@ -348,6 +385,7 @@ $('startBtn').onclick = startLocation;
 $('stopBtn').onclick = stopLocation;
 $('logoutBtn').onclick = performRiderLogout;
 
+checkContentSchemeWarning();
 updateDiagnostics();
 checkPermissionStatus();
 checkExistingSession();
