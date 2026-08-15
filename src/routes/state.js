@@ -128,10 +128,20 @@ async function saveSnapshot(snapshot) {
             ]);
         }
 
-        await client.query('DELETE FROM "deliveryBoys"');
         for (const boy of withRequiredKey(state.deliveryBoys, 'id', 'deliveryBoys')) {
-            await client.query(`INSERT INTO "deliveryBoys" (id, name, mobile, "passwordHash", status) VALUES ($1, $2, $3, $4, $5)`, [
-                boy.id, boy.name, boy.mobile || null, boy.passwordHash || null, boy.status || 'Active'
+            await client.query(`
+                INSERT INTO "deliveryBoys" (id, name, mobile, status)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    name = EXCLUDED.name,
+                    mobile = COALESCE(EXCLUDED.mobile, "deliveryBoys".mobile),
+                    status = COALESCE(EXCLUDED.status, "deliveryBoys".status)
+            `, [
+                boy.id,
+                boy.name,
+                boy.mobile || null,
+                boy.status || 'Active'
             ]);
         }
 
@@ -270,7 +280,11 @@ router.get('/', async (req, res) => {
             remarks: restaurant.remarks
         }));
 
-        const deliveryBoysResult = await pool.query('SELECT * FROM "deliveryBoys"');
+        const deliveryBoysResult = await pool.query(`
+            SELECT id, name, mobile, status,
+            CASE WHEN "passwordHash" IS NOT NULL AND "passwordHash" != '' THEN true ELSE false END as "hasPassword"
+            FROM "deliveryBoys" ORDER BY name
+        `);
         const deliveryBoys = deliveryBoysResult.rows;
 
         const customersResult = await pool.query('SELECT * FROM customers');
