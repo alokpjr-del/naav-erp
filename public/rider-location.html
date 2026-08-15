@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#111827">
-<title>NAAV Rider Location</title>
+<title>NAAV Rider</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f4f6f8;color:#111827}
 .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -14,24 +14,24 @@ label{display:block;font-size:12px;font-weight:700;color:#475569;margin:0 0 6px}
 .status{padding:14px;border-radius:15px;background:#f8fafc;border:1px solid #e2e8f0;margin:4px 0 14px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#94a3b8;margin-right:7px}.dot.on{background:#16a34a}.status strong{font-size:14px}.muted{font-size:12px;color:#64748b;margin-top:4px}
 button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}.primary{background:#111827;color:#fff}.danger{background:#fee2e2;color:#991b1b}.secondary{background:#eef2ff;color:#3730a3}.outline{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 .location{display:none;margin-top:14px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;line-height:1.7}.location.show{display:block}.row{display:flex;justify-content:space-between;gap:10px;margin-bottom:2px}.value{font-weight:700;color:#0f172a}
-.notice{font-size:11px;color:#64748b;line-height:1.5;margin-top:16px;text-align:center}
+.notice{font-size:12px;color:#64748b;line-height:1.5;margin-top:18px;text-align:center;font-weight:500}
 .error-banner{padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:14px;font-size:12px;font-weight:700;margin-bottom:14px;display:none;line-height:1.5}
 .welcome-banner{padding:14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:16px;margin-bottom:14px}
 
-.diag-box{margin-top:16px;padding:14px;border-radius:14px;background:#1e293b;color:#f8fafc;font-size:11px;line-height:1.6;font-family:monospace}
+.diag-box{display:none;margin-top:16px;padding:14px;border-radius:14px;background:#1e293b;color:#f8fafc;font-size:11px;line-height:1.6;font-family:monospace}
 .diag-title{font-weight:800;color:#f59e0b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-size:11px}
 .break-all{word-break:break-all}
 </style>
 </head>
 <body>
 <div class="wrap"><main class="card">
-<div class="brand"><div class="logo">N</div><div><h1>NAAV Rider Location</h1><p>Authenticated Location Sharing</p></div></div>
+<div class="brand"><div class="logo">N</div><div><h1>NAAV Rider</h1><p>Rider Login</p></div></div>
 
 <!-- WHATSAPP CONTENT:// PROTOCOL WARNING -->
 <div id="contentWarningBanner" style="display:none;padding:14px;background:#fffbebf0;border:2px solid #f59e0b;color:#92400e;border-radius:16px;margin-bottom:14px;font-size:12px;line-height:1.6;">
     <strong style="font-size:14px;display:block;margin-bottom:4px;color:#b45309;">⚠️ Open in Chrome Browser</strong>
-    You are opening this page directly from WhatsApp file view (<code style="background:#fef3c7;padding:2px 4px;border-radius:4px;">content://</code>), which blocks GPS & API connections.<br><br>
-    <strong>Please open the official HTTPS link in Chrome:</strong><br>
+    You are opening this page directly from WhatsApp file view (<code style="background:#fef3c7;padding:2px 4px;border-radius:4px;">content://</code>).<br><br>
+    <strong>Please open the official link in Chrome:</strong><br>
     <a href="https://naavaccount.onrender.com/rider-location.html" target="_blank" style="color:#b45309;font-weight:800;text-decoration:underline;word-break:break-all;">https://naavaccount.onrender.com/rider-location.html</a>
 </div>
 
@@ -45,7 +45,7 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
     <label>Password</label>
     <input type="password" id="loginPassword" placeholder="Enter Rider Password">
     
-    <button id="loginBtn" class="primary">🔐 Login & Start Location</button>
+    <button id="loginBtn" class="primary">🔐 Login</button>
 </div>
 
 <!-- 2. AUTHENTICATED RIDER VIEW -->
@@ -56,13 +56,11 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
     </div>
 
     <div class="status">
-        <div><span id="dot" class="dot"></span><strong id="statusText">Location Sharing Off</strong></div>
-        <div id="statusSub" class="muted">Tap Start Location Sharing to begin.</div>
+        <div><span id="dot" class="dot on"></span><strong id="statusText">Online & Active</strong></div>
+        <div id="statusSub" class="muted">Connected to NAAV Delivery Network.</div>
     </div>
     
-    <button id="startBtn" class="primary">📍 Start Location Sharing</button>
-    <button id="stopBtn" class="danger" style="display:none">⛔ Stop Location Sharing</button>
-    <button id="logoutBtn" class="outline">🚪 Logout</button>
+    <button id="logoutBtn" class="outline" style="margin-top:16px">🚪 Logout</button>
     
     <div id="locationBox" class="location">
         <div class="row"><span>Latitude</span><span id="lat" class="value">-</span></div>
@@ -72,7 +70,7 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
     </div>
 </div>
 
-<!-- SYSTEM DIAGNOSTICS PANEL -->
+<!-- HIDDEN INTERNAL DIAGNOSTICS PANEL (Internal developer use only) -->
 <div id="diagBox" class="diag-box">
   <div class="diag-title">🔧 Rider GPS System Diagnostics</div>
   <div class="row"><span>API Base URL:</span><span id="diagApiBase" class="value break-all">-</span></div>
@@ -86,7 +84,7 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
   <div class="row"><span>Last API Response:</span><span id="diagApiResponse" class="value break-all">-</span></div>
 </div>
 
-<div class="notice">📍 Location Permission Required. Serve over HTTPS for GPS tracking.</div>
+<div class="notice">Location permission is required while using delivery services.</div>
 </main></div>
 
 <script>
@@ -134,32 +132,34 @@ function updateDiagnostics(fields = {}) {
     const hasGps = !!(navigator && navigator.geolocation);
     
     if ($('diagApiBase')) $('diagApiBase').textContent = API_BASE;
-    $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (HTTPS)</span>' : '<span style="color:#ef4444">NO (Insecure Context / Content URI)</span>';
-    $('diagGpsApi').innerHTML = hasGps ? '<span style="color:#22c55e">AVAILABLE</span>' : '<span style="color:#ef4444">NOT AVAILABLE</span>';
-    $('diagUrl').textContent = window.location.href;
+    if ($('diagSecure')) $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (HTTPS)</span>' : '<span style="color:#ef4444">NO (Insecure Context / Content URI)</span>';
+    if ($('diagGpsApi')) $('diagGpsApi').innerHTML = hasGps ? '<span style="color:#22c55e">AVAILABLE</span>' : '<span style="color:#ef4444">NOT AVAILABLE</span>';
+    if ($('diagUrl')) $('diagUrl').textContent = window.location.href;
     
-    if (currentRiderObj) {
-        $('diagAuthRider').innerHTML = `<span style="color:#22c55e">LOGGED IN: ${currentRiderObj.name} (${currentRiderObj.id})</span>`;
-    } else {
-        $('diagAuthRider').innerHTML = '<span style="color:#94a3b8">NOT LOGGED IN</span>';
+    if ($('diagAuthRider')) {
+        if (currentRiderObj) {
+            $('diagAuthRider').innerHTML = `<span style="color:#22c55e">LOGGED IN: ${currentRiderObj.name} (${currentRiderObj.id})</span>`;
+        } else {
+            $('diagAuthRider').innerHTML = '<span style="color:#94a3b8">NOT LOGGED IN</span>';
+        }
     }
 
-    if (fields.permission !== undefined) $('diagPerm').textContent = fields.permission;
-    if (fields.errorMsg !== undefined) $('diagErrorMsg').textContent = fields.errorMsg;
-    if (fields.apiStatus !== undefined) $('diagApiStatus').textContent = fields.apiStatus;
-    if (fields.apiResponse !== undefined) $('diagApiResponse').textContent = fields.apiResponse;
+    if (fields.permission !== undefined && $('diagPerm')) $('diagPerm').textContent = fields.permission;
+    if (fields.errorMsg !== undefined && $('diagErrorMsg')) $('diagErrorMsg').textContent = fields.errorMsg;
+    if (fields.apiStatus !== undefined && $('diagApiStatus')) $('diagApiStatus').textContent = fields.apiStatus;
+    if (fields.apiResponse !== undefined && $('diagApiResponse')) $('diagApiResponse').textContent = fields.apiResponse;
 }
 
 async function checkPermissionStatus() {
     if (navigator.permissions && navigator.permissions.query) {
         try {
             const status = await navigator.permissions.query({ name: 'geolocation' });
-            $('diagPerm').textContent = (status.state || 'UNKNOWN').toUpperCase();
+            if ($('diagPerm')) $('diagPerm').textContent = (status.state || 'UNKNOWN').toUpperCase();
             status.onchange = () => {
-                $('diagPerm').textContent = (status.state || 'UNKNOWN').toUpperCase();
+                if ($('diagPerm')) $('diagPerm').textContent = (status.state || 'UNKNOWN').toUpperCase();
             };
         } catch (e) {
-            $('diagPerm').textContent = 'QUERY FAILED (' + e.message + ')';
+            if ($('diagPerm')) $('diagPerm').textContent = 'QUERY FAILED (' + e.message + ')';
         }
     }
 }
@@ -183,7 +183,7 @@ async function performRiderLogin() {
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-            showError(data.error || 'Login failed. Invalid credentials.');
+            showError(data.error || 'Invalid Rider ID/Mobile or Password.');
             updateDiagnostics({ apiStatus: res.status + ' Login Failed', apiResponse: JSON.stringify(data) });
             return;
         }
@@ -200,7 +200,7 @@ async function performRiderLogin() {
         startLocation();
 
     } catch (e) {
-        let errorMsg = 'Unable to connect to NAAV server (' + API_BASE + '). Please check your internet connection.';
+        let errorMsg = 'Unable to connect to NAAV server. Please check your internet connection.';
         if (window.location.protocol === 'content:' || window.location.protocol === 'file:') {
             errorMsg = 'Cannot connect from WhatsApp file view. Please open the link in Chrome: https://naavaccount.onrender.com/rider-location.html';
         }
@@ -224,6 +224,7 @@ async function checkExistingSession() {
         if (res.ok && data.success && data.rider) {
             currentRiderObj = data.rider;
             showAuthenticatedUI();
+            startLocation();
         } else {
             sessionStorage.removeItem('naav_rider_token');
             currentRiderToken = '';
@@ -246,8 +247,8 @@ function showAuthenticatedUI() {
     $('riderActiveSection').style.display = 'block';
     $('welcomeRiderName').textContent = `🚴 Welcome, ${currentRiderObj.name}`;
     $('welcomeRiderInfo').textContent = `Rider ID: ${currentRiderObj.id} | Mobile: ${currentRiderObj.mobile || '-'}`;
-    setStatus(false, 'Ready to Share Location', 'Tap Start Location Sharing to begin.');
-    updateDiagnostics({ errorMsg: 'Authenticated & Ready' });
+    setStatus(true, 'Online & Active', 'Connected to NAAV Delivery Network.');
+    updateDiagnostics({ errorMsg: 'Authenticated & Active' });
 }
 
 // 3. LOGOUT HANDLER
@@ -271,8 +272,6 @@ function setStatus(on, title, sub) {
     $('dot').classList.toggle('on', on);
     $('statusText').textContent = title;
     $('statusSub').textContent = sub;
-    $('startBtn').style.display = on ? 'none' : 'block';
-    $('stopBtn').style.display = on ? 'block' : 'none';
 }
 
 // 4. LOCATION POSITING
@@ -282,7 +281,6 @@ async function renderPosition(p) {
     $('lng').textContent = c.longitude.toFixed(6);
     $('acc').textContent = Math.round(c.accuracy) + ' m';
     $('updated').textContent = n.toLocaleTimeString();
-    $('locationBox').classList.add('show');
 
     updateDiagnostics({ errorMsg: 'GPS position acquired' });
 
@@ -306,7 +304,6 @@ async function renderPosition(p) {
 
         const resData = await res.json();
         if (res.status === 401) {
-            alert('Rider session expired. Please login again.');
             performRiderLogout();
             return;
         }
@@ -328,22 +325,20 @@ function gpsError(e) {
     updateDiagnostics({
         errorMsg: 'GPS Error ' + e.code + ': ' + (e.message || m[e.code])
     });
-    setStatus(false, 'Location Sharing Off', m[e.code] || 'Unable to get location.');
+    setStatus(false, 'Offline', m[e.code] || 'Unable to get location.');
 }
 
 function startLocation() {
-    if (!currentRiderToken || !currentRiderObj) {
-        return alert('Please login to start location sharing.');
-    }
+    if (!currentRiderToken || !currentRiderObj) return;
     if (!window.isSecureContext && window.location.protocol !== 'http:') {
-        setStatus(false, 'Insecure Context (HTTP)', 'Chrome disables GPS on non-secure HTTP. Use HTTPS.');
-        return alert('Mobile browser geolocation requires HTTPS or localhost.');
+        setStatus(false, 'Offline', 'Mobile browser geolocation requires HTTPS.');
+        return;
     }
     if (!navigator.geolocation) {
-        return setStatus(false, 'GPS Not Supported', 'Browser does not support GPS.');
+        return setStatus(false, 'Offline', 'Browser does not support GPS.');
     }
 
-    setStatus(true, 'Location Sharing On', 'Acquiring GPS location fix…');
+    setStatus(true, 'Online & Active', 'Sharing live location with NAAV Network.');
     updateDiagnostics({ errorMsg: 'Acquiring GPS fix…' });
 
     const highAccOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
@@ -376,13 +371,11 @@ function startLocation() {
 function stopLocation() {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     watchId = null;
-    setStatus(false, 'Location Sharing Off', 'Location sharing stopped.');
+    setStatus(false, 'Offline', 'Location sharing stopped.');
     updateDiagnostics({ errorMsg: 'Sharing stopped by user' });
 }
 
 $('loginBtn').onclick = performRiderLogin;
-$('startBtn').onclick = startLocation;
-$('stopBtn').onclick = stopLocation;
 $('logoutBtn').onclick = performRiderLogout;
 
 checkContentSchemeWarning();
