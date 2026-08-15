@@ -1068,14 +1068,18 @@
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Select Restaurant</label>
                                     <select id="restSettleVendor" onchange="calculateRestSettlementPreview()" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"></select>
                                 </div>
+                                <div id="restSettleWeekBadge" class="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-semibold text-blue-800 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-calendar-week mr-1.5 text-blue-600"></i><strong id="restSettleWeekPeriodLabel">Weekly Period: -- → --</strong></span>
+                                    <span class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md" id="restSettleDateLabel">Settlement: --</span>
+                                </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">From Date</label>
-                                        <input type="date" id="restSettleFrom" onchange="calculateRestSettlementPreview()" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">From Date (Monday)</label>
+                                        <input type="date" id="restSettleFrom" onchange="onRestSettleDateChange('restSettleFrom')" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">To Date</label>
-                                        <input type="date" id="restSettleTo" onchange="calculateRestSettlementPreview()" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">To Date (Sunday)</label>
+                                        <input type="date" id="restSettleTo" onchange="onRestSettleDateChange('restSettleTo')" required class="w-full p-3 bg-surface border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
@@ -2747,6 +2751,60 @@
             closeClearAuditModal();
         }
 
+        // Central NAAV Weekly Date Calculation Helper (Monday -> Sunday, Settlement on Following Monday)
+        function getNAAVWeekRange(inputDate) {
+            let d;
+            if (!inputDate) {
+                d = new Date();
+            } else if (typeof inputDate === 'string') {
+                const norm = typeof normalizeDateStr === 'function' ? normalizeDateStr(inputDate) : inputDate.trim();
+                const parts = norm.split('-');
+                if (parts.length === 3 && parts[0].length === 4) {
+                    d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                } else {
+                    d = new Date(inputDate);
+                }
+            } else {
+                d = new Date(inputDate);
+            }
+
+            if (isNaN(d.getTime())) {
+                d = new Date();
+            }
+
+            const day = d.getDay();
+            const diffToMonday = day === 0 ? -6 : 1 - day;
+
+            const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
+            const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+            const followingMonday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7);
+
+            const formatDateStr = (dateObj) => {
+                const yyyy = dateObj.getFullYear();
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+
+            const formatDisplayDate = (dateObj) => {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                const mmm = months[dateObj.getMonth()];
+                const yyyy = dateObj.getFullYear();
+                return `${dd}-${mmm}-${yyyy}`;
+            };
+
+            return {
+                startDate: formatDateStr(monday),
+                endDate: formatDateStr(sunday),
+                settlementDate: formatDateStr(followingMonday),
+                formattedStartDate: formatDisplayDate(monday),
+                formattedEndDate: formatDisplayDate(sunday),
+                formattedSettlementDate: formatDisplayDate(followingMonday),
+                formattedPeriod: `${formatDisplayDate(monday)} → ${formatDisplayDate(sunday)}`
+            };
+        }
+
         function requestSecurityCheck(callback) {
             pendingAction = callback;
             document.getElementById('securityPassInput').value = '';
@@ -3124,11 +3182,9 @@
             const today = typeof getOperationalDateStr === 'function' ? getOperationalDateStr() : new Date().toISOString().split('T')[0];
             const currentMonthStr = today.substring(0, 7);
 
-            const now = new Date();
-            const dayOfWeek = now.getDay() || 7;
-            const monday = new Date(now);
-            monday.setDate(now.getDate() - dayOfWeek + 1);
-            const mondayStr = monday.toISOString().split('T')[0];
+            const weekInfo = getNAAVWeekRange(today);
+            const mondayStr = weekInfo.startDate;
+            const sundayStr = weekInfo.endDate;
 
             let todaysOrders = 0;
             let todaysGrossProfit = 0;
@@ -3178,7 +3234,7 @@
                     }
                 }
 
-                if (eDate >= mondayStr && eDate <= today) {
+                if (eDate >= mondayStr && eDate <= sundayStr && eDate <= today) {
                     weeklyProfit += profit;
                 }
 
@@ -3425,11 +3481,30 @@
         // ====================================================
         function initRestaurantSettlementTab() {
             populateRestSettlementDropdowns();
-            const todayStr = new Date().toISOString().split('T')[0];
-            document.getElementById('restSettleFrom').value = todayStr;
-            document.getElementById('restSettleTo').value = todayStr;
-            document.getElementById('restSettleDate').value = todayStr;
+            const weekInfo = getNAAVWeekRange();
+            document.getElementById('restSettleFrom').value = weekInfo.startDate;
+            document.getElementById('restSettleTo').value = weekInfo.endDate;
+            document.getElementById('restSettleDate').value = weekInfo.settlementDate;
+            updateRestSettleWeekBadge(weekInfo);
             loadRestSettlements();
+        }
+
+        function onRestSettleDateChange(changedId) {
+            const rawVal = document.getElementById(changedId).value;
+            if (!rawVal) return;
+            const weekInfo = getNAAVWeekRange(rawVal);
+            document.getElementById('restSettleFrom').value = weekInfo.startDate;
+            document.getElementById('restSettleTo').value = weekInfo.endDate;
+            document.getElementById('restSettleDate').value = weekInfo.settlementDate;
+            updateRestSettleWeekBadge(weekInfo);
+            calculateRestSettlementPreview();
+        }
+
+        function updateRestSettleWeekBadge(weekInfo) {
+            const badge = document.getElementById('restSettleWeekBadge');
+            if (badge) {
+                badge.innerHTML = `<span><i class="fa-solid fa-calendar-week mr-1.5 text-blue-600"></i>Weekly Period: <strong>${weekInfo.formattedPeriod}</strong></span><span class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">Settlement Date: ${weekInfo.formattedSettlementDate}</span>`;
+            }
         }
 
         function refreshSettlementRelatedViews() {
@@ -5883,14 +5958,9 @@
                 if (!fromDate) fromDate = todayStr;
                 toDate = fromDate;
             } else if (type === 'weekly') {
-                if (!fromDate) {
-                    const d = new Date();
-                    const day = d.getDay();
-                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                    const monday = new Date(d.setDate(diff));
-                    fromDate = monday.toISOString().split('T')[0];
-                    toDate = todayStr;
-                }
+                const weekInfo = getNAAVWeekRange(fromDate || todayStr);
+                fromDate = weekInfo.startDate;
+                toDate = weekInfo.endDate;
             } else if (type === 'monthly') {
                 if (!fromDate) {
                     const y = todayObj.getFullYear();
