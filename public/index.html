@@ -5677,52 +5677,53 @@
         }
 
         function closeEditDeliveryBoyModal() {
-            document.getElementById('editDeliveryBoyModal').classList.add('hidden');
+            const modal = document.getElementById('editDeliveryBoyModal');
+            if (modal) modal.classList.add('hidden');
+            const errEl = document.getElementById('editDeliveryBoyErrorMsg');
+            if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
         }
 
         function saveEditDeliveryBoy(e) {
-            e.preventDefault();
-            requestSecurityCheck(() => {
-                const id = document.getElementById('editDeliveryBoyId').value;
-                const name = document.getElementById('editDeliveryBoyName').value.trim();
-                const mobile = document.getElementById('editDeliveryBoyMobile').value.trim();
-                const status = document.getElementById('editDeliveryBoyStatus').value;
-                const errEl = document.getElementById('editDeliveryBoyErrorMsg');
+            if (e) e.preventDefault();
+            const id = document.getElementById('editDeliveryBoyId').value;
+            const name = document.getElementById('editDeliveryBoyName').value.trim();
+            const mobile = document.getElementById('editDeliveryBoyMobile').value.trim();
+            const status = document.getElementById('editDeliveryBoyStatus').value;
+            const errEl = document.getElementById('editDeliveryBoyErrorMsg');
 
-                if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+            if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
 
-                if (!name) {
-                    if (errEl) { errEl.textContent = 'Delivery Boy Name is required.'; errEl.classList.remove('hidden'); }
-                    return;
+            if (!name) {
+                if (errEl) { errEl.textContent = 'Delivery Boy Name is required.'; errEl.classList.remove('hidden'); }
+                return;
+            }
+
+            if (mobile && (!/^\d{10}$/.test(mobile))) {
+                if (errEl) { errEl.textContent = 'Mobile number must be a valid 10-digit number.'; errEl.classList.remove('hidden'); }
+                return;
+            }
+
+            const oldObj = (db.deliveryBoys || []).find(x => x.id === id) || {};
+
+            fetch('/api/delivery-boys/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, mobile, status })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    logAudit('Update', `Delivery Boy Updated: ${name} (ID: ${id}) - Old Name: ${oldObj.name || '-'} -> New Name: ${name}, Old Mobile: ${oldObj.mobile || '-'} -> New Mobile: ${mobile || '-'}, Old Status: ${oldObj.status || 'Active'} -> New Status: ${status}`);
+                    closeEditDeliveryBoyModal();
+                    loadDeliveryBoys();
+                } else {
+                    if (errEl) { errEl.textContent = res.error || 'Failed to update rider.'; errEl.classList.remove('hidden'); }
+                    else { alert(res.error || 'Failed to update rider.'); }
                 }
-
-                if (mobile && (!/^\d{10}$/.test(mobile))) {
-                    if (errEl) { errEl.textContent = 'Mobile number must be a valid 10-digit number.'; errEl.classList.remove('hidden'); }
-                    return;
-                }
-
-                const oldObj = (db.deliveryBoys || []).find(x => x.id === id) || {};
-
-                fetch('/api/delivery-boys/' + id, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, mobile, status })
-                })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        logAudit('Update', `Delivery Boy Updated: ${name} (ID: ${id}) - Old Name: ${oldObj.name || '-'} -> New Name: ${name}, Old Mobile: ${oldObj.mobile || '-'} -> New Mobile: ${mobile || '-'}, Old Status: ${oldObj.status || 'Active'} -> New Status: ${status}`);
-                        closeEditDeliveryBoyModal();
-                        loadDeliveryBoys();
-                    } else {
-                        if (errEl) { errEl.textContent = res.error || 'Failed to update rider.'; errEl.classList.remove('hidden'); }
-                        else { alert(res.error || 'Failed to update rider.'); }
-                    }
-                })
-                .catch(err => {
-                    if (errEl) { errEl.textContent = 'Error: ' + err.message; errEl.classList.remove('hidden'); }
-                    else { alert('Failed to connect: ' + err.message); }
-                });
+            })
+            .catch(err => {
+                if (errEl) { errEl.textContent = 'Error: ' + err.message; errEl.classList.remove('hidden'); }
+                else { alert('Failed to connect: ' + err.message); }
             });
         }
 
