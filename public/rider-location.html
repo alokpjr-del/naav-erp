@@ -90,7 +90,24 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
 <script>
 const $=id=>document.getElementById(id);
 let watchId = null;
-let currentRiderToken = sessionStorage.getItem('naav_rider_token') || '';
+
+function getSavedToken() {
+    return localStorage.getItem('naav_rider_token') || sessionStorage.getItem('naav_rider_token') || '';
+}
+
+function saveToken(token) {
+    if (token) {
+        localStorage.setItem('naav_rider_token', token);
+        sessionStorage.setItem('naav_rider_token', token);
+    }
+}
+
+function clearLocalToken() {
+    localStorage.removeItem('naav_rider_token');
+    sessionStorage.removeItem('naav_rider_token');
+}
+
+let currentRiderToken = getSavedToken();
 let currentRiderObj = null;
 
 // Determine API Base URL dynamically (prefer same-origin HTTP/HTTPS, fallback to Production)
@@ -188,10 +205,10 @@ async function performRiderLogin() {
             return;
         }
 
-        // Store Token & Rider Info
+        // Store Token in Persistent Storage
         currentRiderToken = data.token;
         currentRiderObj = data.rider;
-        sessionStorage.setItem('naav_rider_token', data.token);
+        saveToken(data.token);
 
         showAuthenticatedUI();
         updateDiagnostics({ apiStatus: '200 Login OK', apiResponse: JSON.stringify(data) });
@@ -209,8 +226,9 @@ async function performRiderLogin() {
     }
 }
 
-// 2. CHECK SESSION ON LOAD
+// 2. CHECK SESSION ON LOAD (F5 REFRESH / RE-ENTRY PERSISTENCE)
 async function checkExistingSession() {
+    currentRiderToken = getSavedToken();
     if (!currentRiderToken) {
         showLoginUI();
         return;
@@ -225,13 +243,28 @@ async function checkExistingSession() {
             currentRiderObj = data.rider;
             showAuthenticatedUI();
             startLocation();
-        } else {
-            sessionStorage.removeItem('naav_rider_token');
+        } else if (res.status === 401) {
+            // Session genuinely revoked by server -> clear token
+            clearLocalToken();
             currentRiderToken = '';
             showLoginUI();
+        } else {
+            // Temporary server delay or error -> keep local state authenticated
+            if (currentRiderToken) {
+                showAuthenticatedUI();
+                startLocation();
+            } else {
+                showLoginUI();
+            }
         }
     } catch (e) {
-        showLoginUI();
+        // Network temporary failure -> DO NOT LOG OUT! Keep logged in UI & restart location
+        if (currentRiderToken) {
+            showAuthenticatedUI();
+            startLocation();
+        } else {
+            showLoginUI();
+        }
     }
 }
 
@@ -245,13 +278,15 @@ function showLoginUI() {
 function showAuthenticatedUI() {
     $('loginSection').style.display = 'none';
     $('riderActiveSection').style.display = 'block';
-    $('welcomeRiderName').textContent = `🚴 Welcome, ${currentRiderObj.name}`;
-    $('welcomeRiderInfo').textContent = `Rider ID: ${currentRiderObj.id} | Mobile: ${currentRiderObj.mobile || '-'}`;
+    if (currentRiderObj) {
+        $('welcomeRiderName').textContent = `🚴 Welcome, ${currentRiderObj.name}`;
+        $('welcomeRiderInfo').textContent = `Rider ID: ${currentRiderObj.id} | Mobile: ${currentRiderObj.mobile || '-'}`;
+    }
     setStatus(true, 'Online & Active', 'Connected to NAAV Delivery Network.');
     updateDiagnostics({ errorMsg: 'Authenticated & Active' });
 }
 
-// 3. LOGOUT HANDLER
+// 3. LOGOUT HANDLER (EXPLICIT LOGOUT IS THE ONLY STOP CONDITION)
 async function performRiderLogout() {
     stopLocation();
     if (currentRiderToken) {
@@ -262,7 +297,7 @@ async function performRiderLogout() {
             });
         } catch(e) {}
     }
-    sessionStorage.removeItem('naav_rider_token');
+    clearLocalToken();
     currentRiderToken = '';
     currentRiderObj = null;
     showLoginUI();
@@ -274,13 +309,13 @@ function setStatus(on, title, sub) {
     $('statusSub').textContent = sub;
 }
 
-// 4. LOCATION POSITING
+// 4. CONTINUOUS LOCATION POSITING
 async function renderPosition(p) {
     const c = p.coords, n = new Date();
-    $('lat').textContent = c.latitude.toFixed(6);
-    $('lng').textContent = c.longitude.toFixed(6);
-    $('acc').textContent = Math.round(c.accuracy) + ' m';
-    $('updated').textContent = n.toLocaleTimeString();
+    if ($('lat')) $('lat').textContent = c.latitude.toFixed(6);
+    if ($('lng')) $('lng').textContent = c.longitude.toFixed(6);
+    if ($('acc')) $('acc').textContent = Math.round(c.accuracy) + ' m';
+    if ($('updated')) $('updated').textContent = n.toLocaleTimeString();
 
     updateDiagnostics({ errorMsg: 'GPS position acquired' });
 
@@ -304,32 +339,42 @@ async function renderPosition(p) {
 
         const resData = await res.json();
         if (res.status === 401) {
+            showError('Rider session expired. Please login again.');
             performRiderLogout();
             return;
         }
 
+        setStatus(true, 'Online & Active', 'Connected to NAAV Delivery Network.');
         updateDiagnostics({
             apiStatus: res.status + ' ' + res.statusText,
             apiResponse: JSON.stringify(resData)
         });
     } catch (e) {
+        // Network temporary failure -> DO NOT LOG OUT! DO NOT STOP GPS WATCHER!
+        setStatus(true, 'Online & Active', 'Reconnecting to network… (Location tracking active)');
         updateDiagnostics({
-            apiStatus: 'NETWORK ERROR',
+            apiStatus: 'NETWORK TEMPORARY OUTAGE',
             apiResponse: e.message
         });
     }
 }
 
 function gpsError(e) {
-    const m = { 1: 'Location permission denied.', 2: 'GPS position unavailable.', 3: 'Location request timed out.' };
+    const m = { 1: 'Location permission denied.', 2: 'GPS position weak/unavailable.', 3: 'GPS request timeout.' };
     updateDiagnostics({
-        errorMsg: 'GPS Error ' + e.code + ': ' + (e.message || m[e.code])
+        errorMsg: 'GPS Alert ' + e.code + ': ' + (e.message || m[e.code])
     });
-    setStatus(false, 'Offline', m[e.code] || 'Unable to get location.');
+    
+    // DO NOT LOG OUT THE RIDER ON TEMPORARY GPS TIMEOUT OR WEAK SIGNAL!
+    if (e.code === 1) {
+        setStatus(false, 'Offline', 'Location permission denied in browser.');
+    } else {
+        setStatus(true, 'Online & Active', 'Acquiring fresh GPS fix…');
+    }
 }
 
 function startLocation() {
-    if (!currentRiderToken || !currentRiderObj) return;
+    if (!currentRiderToken) return;
     if (!window.isSecureContext && window.location.protocol !== 'http:') {
         setStatus(false, 'Offline', 'Mobile browser geolocation requires HTTPS.');
         return;
@@ -338,29 +383,25 @@ function startLocation() {
         return setStatus(false, 'Offline', 'Browser does not support GPS.');
     }
 
+    // Prevent duplicate watchers
+    if (watchId !== null) return;
+
     setStatus(true, 'Online & Active', 'Sharing live location with NAAV Network.');
     updateDiagnostics({ errorMsg: 'Acquiring GPS fix…' });
 
     const highAccOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
 
-    navigator.geolocation.getCurrentPosition(
+    watchId = navigator.geolocation.watchPosition(
         (pos) => {
             renderPosition(pos);
-            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-            watchId = navigator.geolocation.watchPosition(renderPosition, gpsError, { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
         },
         (err) => {
-            // Failover to Standard Accuracy
+            // Fallback to standard accuracy on high-accuracy timeout
             updateDiagnostics({ errorMsg: 'HighAcc failed. Trying standard accuracy...' });
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    renderPosition(pos);
-                    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-                    watchId = navigator.geolocation.watchPosition(renderPosition, gpsError, { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 });
-                },
-                (err2) => {
-                    gpsError(err2);
-                },
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            watchId = navigator.geolocation.watchPosition(
+                renderPosition,
+                gpsError,
                 { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 }
             );
         },
@@ -374,6 +415,17 @@ function stopLocation() {
     setStatus(false, 'Offline', 'Location sharing stopped.');
     updateDiagnostics({ errorMsg: 'Sharing stopped by user' });
 }
+
+// Background / Visibility / Tab Focus Listeners
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentRiderToken) {
+        if (watchId === null) startLocation();
+    }
+});
+
+window.addEventListener('focus', () => {
+    if (currentRiderToken && watchId === null) startLocation();
+});
 
 $('loginBtn').onclick = performRiderLogin;
 $('logoutBtn').onclick = performRiderLogout;
