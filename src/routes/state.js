@@ -73,19 +73,43 @@ async function saveSnapshot(snapshot) {
         const state = snapshot || {};
         const settings = state.settings || {};
 
-        await client.query('DELETE FROM settings');
         for (const [key, value] of Object.entries(settings)) {
             await client.query(
-                'INSERT INTO settings (key, value) VALUES ($1, $2)',
+                `INSERT INTO settings (key, value) VALUES ($1, $2)
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
                 [key, typeof value === 'string' ? value : JSON.stringify(value)]
             );
         }
 
-        await client.query('DELETE FROM entries');
         for (const entry of withRequiredKey(state.entries, 'id', 'entries')) {
             await client.query(`INSERT INTO entries (
                 id, "orderId", date, "customerName", "customerMobile", "customerAddress", vendor, "vendorRate", location, category, "onlineRate", percentage, "deliveryCharge", profit, "deliveryBoy", cash, upi, "naavTransferred", "orderStatus", "isSettled", "paidDate", "paidTime", "paidBy", remarks, timeline
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`, [
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+            ON CONFLICT (id) DO UPDATE SET
+                "orderId" = EXCLUDED."orderId",
+                date = EXCLUDED.date,
+                "customerName" = EXCLUDED."customerName",
+                "customerMobile" = EXCLUDED."customerMobile",
+                "customerAddress" = EXCLUDED."customerAddress",
+                vendor = EXCLUDED.vendor,
+                "vendorRate" = EXCLUDED."vendorRate",
+                location = EXCLUDED.location,
+                category = EXCLUDED.category,
+                "onlineRate" = EXCLUDED."onlineRate",
+                percentage = EXCLUDED.percentage,
+                "deliveryCharge" = EXCLUDED."deliveryCharge",
+                profit = EXCLUDED.profit,
+                "deliveryBoy" = EXCLUDED."deliveryBoy",
+                cash = EXCLUDED.cash,
+                upi = EXCLUDED.upi,
+                "naavTransferred" = EXCLUDED."naavTransferred",
+                "orderStatus" = EXCLUDED."orderStatus",
+                "isSettled" = EXCLUDED."isSettled",
+                "paidDate" = EXCLUDED."paidDate",
+                "paidTime" = EXCLUDED."paidTime",
+                "paidBy" = EXCLUDED."paidBy",
+                remarks = EXCLUDED.remarks,
+                timeline = EXCLUDED.timeline`, [
                 entry.id,
                 entry.orderId,
                 entry.date,
@@ -114,16 +138,46 @@ async function saveSnapshot(snapshot) {
             ]);
         }
 
-        await client.query('DELETE FROM expenses');
         for (const expense of withRequiredKey(state.expenses, 'id', 'expenses')) {
-            await client.query(`INSERT INTO expenses (id, "expenseId", date, category, "expenseName", amount, "paymentMode", "paidTo", "refNo", remarks, "createdBy", "createdDateTime") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, [
+            await client.query(`INSERT INTO expenses (
+                id, "expenseId", date, category, "expenseName", amount, "paymentMode", "paidTo", "refNo", remarks, "createdBy", "createdDateTime"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (id) DO UPDATE SET
+                "expenseId" = EXCLUDED."expenseId",
+                date = EXCLUDED.date,
+                category = EXCLUDED.category,
+                "expenseName" = EXCLUDED."expenseName",
+                amount = EXCLUDED.amount,
+                "paymentMode" = EXCLUDED."paymentMode",
+                "paidTo" = EXCLUDED."paidTo",
+                "refNo" = EXCLUDED."refNo",
+                remarks = EXCLUDED.remarks,
+                "createdBy" = EXCLUDED."createdBy",
+                "createdDateTime" = EXCLUDED."createdDateTime"`, [
                 expense.id, expense.expenseId, expense.date, expense.category, expense.expenseName, expense.amount, expense.paymentMode, expense.paidTo, expense.refNo, expense.remarks, expense.createdBy, expense.createdDateTime
             ]);
         }
 
-        await client.query('DELETE FROM restaurants');
         for (const restaurant of withRequiredKey(state.restaurants, 'id', 'restaurants')) {
-            await client.query(`INSERT INTO restaurants (id, name, "contactPerson", mobile, "altMobile", address, gst, email, "openTime", "closeTime", status, remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, [
+            await client.query(`
+                INSERT INTO restaurants (
+                    id, name, "contactPerson", mobile, "altMobile", address, gst, email, "openTime", "closeTime", status, remarks
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    name = EXCLUDED.name,
+                    "contactPerson" = COALESCE(EXCLUDED."contactPerson", restaurants."contactPerson"),
+                    mobile = COALESCE(EXCLUDED.mobile, restaurants.mobile),
+                    "altMobile" = COALESCE(EXCLUDED."altMobile", restaurants."altMobile"),
+                    address = COALESCE(EXCLUDED.address, restaurants.address),
+                    gst = COALESCE(EXCLUDED.gst, restaurants.gst),
+                    email = COALESCE(EXCLUDED.email, restaurants.email),
+                    "openTime" = COALESCE(EXCLUDED."openTime", restaurants."openTime"),
+                    "closeTime" = COALESCE(EXCLUDED."closeTime", restaurants."closeTime"),
+                    status = COALESCE(EXCLUDED.status, restaurants.status),
+                    remarks = COALESCE(EXCLUDED.remarks, restaurants.remarks)
+            `, [
                 restaurant.id, restaurant.name, restaurant.contactPerson, restaurant.mobile, restaurant.altMobile, restaurant.address, restaurant.gst, restaurant.email, restaurant.openTime, restaurant.closeTime, restaurant.status, restaurant.remarks
             ]);
         }
@@ -145,59 +199,84 @@ async function saveSnapshot(snapshot) {
             ]);
         }
 
-        await client.query('DELETE FROM customers');
         for (const customer of withRequiredKey(state.customers, 'id', 'customers')) {
-            await client.query(`INSERT INTO customers (id, name, mobile, address, email, remarks, "createdDate") VALUES ($1, $2, $3, $4, $5, $6, $7)`, [
+            await client.query(`INSERT INTO customers (
+                id, name, mobile, address, email, remarks, "createdDate"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                mobile = COALESCE(EXCLUDED.mobile, customers.mobile),
+                address = COALESCE(EXCLUDED.address, customers.address),
+                email = COALESCE(EXCLUDED.email, customers.email),
+                remarks = COALESCE(EXCLUDED.remarks, customers.remarks),
+                "createdDate" = COALESCE(EXCLUDED."createdDate", customers."createdDate")`, [
                 customer.id, customer.name, customer.mobile, customer.address, customer.email, customer.remarks, customer.createdDate
             ]);
         }
 
-        await client.query('DELETE FROM "recycleBin"');
         for (const item of withRequiredKey(state.recycleBin, 'id', 'recycleBin')) {
-            await client.query(`INSERT INTO "recycleBin" (id, type, data, "deletedAt") VALUES ($1, $2, $3, $4)`, [
+            await client.query(`INSERT INTO "recycleBin" (
+                id, type, data, "deletedAt"
+            ) VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE SET
+                type = EXCLUDED.type,
+                data = EXCLUDED.data,
+                "deletedAt" = EXCLUDED."deletedAt"`, [
                 item.id, item.type, JSON.stringify(item.data || item), item.deletedAt
             ]);
         }
 
-        await client.query('DELETE FROM "riderSettlements"');
         for (const settlement of withRequiredKey(state.riderSettlements, 'id', 'riderSettlements')) {
-            await client.query(`INSERT INTO "riderSettlements" (id, rider, from_date, to_date, orders, earnings, bonus, fine, advance, "netPayable", mode, date, status, remarks, "settledOrderIds") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`, [
+            await client.query(`INSERT INTO "riderSettlements" (
+                id, rider, from_date, to_date, orders, earnings, bonus, fine, advance, "netPayable", mode, date, status, remarks, "settledOrderIds"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ON CONFLICT (id) DO UPDATE SET
+                rider = EXCLUDED.rider,
+                from_date = EXCLUDED.from_date,
+                to_date = EXCLUDED.to_date,
+                orders = EXCLUDED.orders,
+                earnings = EXCLUDED.earnings,
+                bonus = EXCLUDED.bonus,
+                fine = EXCLUDED.fine,
+                advance = EXCLUDED.advance,
+                "netPayable" = EXCLUDED."netPayable",
+                mode = EXCLUDED.mode,
+                date = EXCLUDED.date,
+                status = EXCLUDED.status,
+                remarks = EXCLUDED.remarks,
+                "settledOrderIds" = EXCLUDED."settledOrderIds"`, [
                 settlement.id, settlement.rider, settlement.from, settlement.to, settlement.orders, settlement.earnings, settlement.bonus, settlement.fine, settlement.advance, settlement.netPayable, settlement.mode, settlement.date, settlement.status, settlement.remarks, JSON.stringify(settlement.settledOrderIds || [])
             ]);
         }
 
-        await client.query('DELETE FROM "restaurantSettlements"');
         for (const settlement of withRequiredKey(state.restaurantSettlements, 'id', 'restaurantSettlements')) {
-            await client.query(`INSERT INTO "restaurantSettlements" (id, vendor, from_date, to_date, orders, "pendingAmount", "paidAmount", "outstandingAmount", mode, date, status, remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, [
+            await client.query(`INSERT INTO "restaurantSettlements" (
+                id, vendor, from_date, to_date, orders, "pendingAmount", "paidAmount", "outstandingAmount", mode, date, status, remarks
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (id) DO UPDATE SET
+                vendor = EXCLUDED.vendor,
+                from_date = EXCLUDED.from_date,
+                to_date = EXCLUDED.to_date,
+                orders = EXCLUDED.orders,
+                "pendingAmount" = EXCLUDED."pendingAmount",
+                "paidAmount" = EXCLUDED."paidAmount",
+                "outstandingAmount" = EXCLUDED."outstandingAmount",
+                mode = EXCLUDED.mode,
+                date = EXCLUDED.date,
+                status = EXCLUDED.status,
+                remarks = EXCLUDED.remarks`, [
                 settlement.id, settlement.vendor, settlement.from, settlement.to, settlement.orders, settlement.pendingAmount, settlement.paidAmount, settlement.outstandingAmount, settlement.mode, settlement.date, settlement.status, settlement.remarks
             ]);
         }
 
-        await client.query('DELETE FROM "auditLog"');
         for (const log of state.auditLog || []) {
-            // "auditLog".id is SERIAL PRIMARY KEY (see postgres-schema.js) —
-            // it is NOT NULL with a sequence-generated default. The previous
-            // version of this query included `id` in the column list and
-            // passed `log.id || null`. Client-side log entries built in
-            // index.html don't carry a real DB id until after their first
-            // successful round trip, so this frequently evaluated to an
-            // explicit NULL — and explicitly inserting NULL into a NOT NULL
-            // SERIAL column fails the not-null constraint regardless of the
-            // column having a default, because a provided value (even NULL)
-            // always overrides the default. The fix is to never mention
-            // `id` in the INSERT at all, so Postgres applies nextval() as
-            // designed. Since this table is fully replaced on every
-            // snapshot save (DELETE FROM "auditLog" above), there is no
-            // need to preserve old ids — they're only ever used for
-            // "ORDER BY id DESC" (newest first), which is preserved because
-            // rows are inserted here in the same order they appear in
-            // state.auditLog.
-            await client.query(`INSERT INTO "auditLog" (date, time, "user", action, details) VALUES ($1, $2, $3, $4, $5)`, [
-                log.date, log.time, log.user, log.action, log.details
-            ]);
+            if (log.date && log.details) {
+                await client.query(`INSERT INTO "auditLog" (date, time, "user", action, details) VALUES ($1, $2, $3, $4, $5)`, [
+                    log.date, log.time, log.user, log.action, log.details
+                ]);
+            }
         }
 
-        await client.query('DELETE FROM administrators');
         for (const admin of withRequiredKey(state.administrators, 'id', 'administrators')) {
             let passwordToStore = admin.password || '';
             const isAlreadyHashed = passwordToStore.startsWith('$2a$') || passwordToStore.startsWith('$2b$');
@@ -205,21 +284,46 @@ async function saveSnapshot(snapshot) {
                 passwordToStore = await bcrypt.hash(passwordToStore, 10);
             }
 
-            await client.query(`INSERT INTO administrators (id, "fullName", username, password, mobile, email, role, status, "createdDate", "modifiedDate", "lastLogin", "lastLogout", "createdBy", remarks) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`, [
+            await client.query(`INSERT INTO administrators (
+                id, "fullName", username, password, mobile, email, role, status, "createdDate", "modifiedDate", "lastLogin", "lastLogout", "createdBy", remarks
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            ON CONFLICT (id) DO UPDATE SET
+                "fullName" = EXCLUDED."fullName",
+                username = EXCLUDED.username,
+                password = EXCLUDED.password,
+                mobile = EXCLUDED.mobile,
+                email = EXCLUDED.email,
+                role = EXCLUDED.role,
+                status = EXCLUDED.status,
+                "modifiedDate" = EXCLUDED."modifiedDate",
+                "lastLogin" = EXCLUDED."lastLogin",
+                "lastLogout" = EXCLUDED."lastLogout"`, [
                 admin.id, admin.fullName, admin.username, passwordToStore, admin.mobile, admin.email, admin.role, admin.status, admin.createdDate, admin.modifiedDate, admin.lastLogin, admin.lastLogout, admin.createdBy, admin.remarks
             ]);
         }
 
-        await client.query('DELETE FROM "dayCloseHistory"');
         for (const history of withRequiredKey(state.dayCloseHistory, 'date', 'dayCloseHistory')) {
-            await client.query(`INSERT INTO "dayCloseHistory" (date, "totalOrders", "totalSales", "totalProfit", "totalExpenses", "netProfit", "closedBy", "closedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [
+            await client.query(`INSERT INTO "dayCloseHistory" (
+                date, "totalOrders", "totalSales", "totalProfit", "totalExpenses", "netProfit", "closedBy", "closedAt"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (date) DO UPDATE SET
+                "totalOrders" = EXCLUDED."totalOrders",
+                "totalSales" = EXCLUDED."totalSales",
+                "totalProfit" = EXCLUDED."totalProfit",
+                "totalExpenses" = EXCLUDED."totalExpenses",
+                "netProfit" = EXCLUDED."netProfit",
+                "closedBy" = EXCLUDED."closedBy",
+                "closedAt" = EXCLUDED."closedAt"`, [
                 history.date, history.totalOrders, history.totalSales, history.totalProfit, history.totalExpenses, history.netProfit, history.closedBy, history.closedAt
             ]);
         }
 
-        await client.query('DELETE FROM counters');
-        await client.query(`INSERT INTO counters (name, val) VALUES ('orderCounter', $1)`, [Number(state.orderCounter || 1)]);
-        await client.query(`INSERT INTO counters (name, val) VALUES ('expenseCounter', $1)`, [Number(state.expenseCounter || 1)]);
+        if (state.orderCounter) {
+            await client.query(`INSERT INTO counters (name, val) VALUES ('orderCounter', $1) ON CONFLICT (name) DO UPDATE SET val = GREATEST(counters.val, EXCLUDED.val)`, [Number(state.orderCounter || 1)]);
+        }
+        if (state.expenseCounter) {
+            await client.query(`INSERT INTO counters (name, val) VALUES ('expenseCounter', $1) ON CONFLICT (name) DO UPDATE SET val = GREATEST(counters.val, EXCLUDED.val)`, [Number(state.expenseCounter || 1)]);
+        }
 
         await client.query('COMMIT');
     } catch (e) {
