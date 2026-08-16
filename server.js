@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const { testConnection } = require('./src/postgres');
 const { initTables } = require('./src/postgres-schema');
+const { startBackupScheduler } = require('./src/services/backupService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -42,6 +43,7 @@ app.use('/api/delivery-boys', require('./src/routes/deliveryBoys'));
 app.use('/api/administrators', require('./src/routes/administrators'));
 app.use('/api/audit-log', require('./src/routes/auditLog'));
 app.use('/api/settings', require('./src/routes/settings'));
+app.use('/api/backup', require('./src/routes/backup'));
 app.use('/api', require('./src/routes/riderLocations'));
 
 // A typo'd or removed /api/* route used to silently fall through to the
@@ -79,18 +81,14 @@ async function startServer() {
     }
 
     try {
-        // Idempotent: safe to run on every boot. Creates any missing tables/
-        // columns so the live schema always matches what the route code
-        // expects. This MUST run before the app accepts traffic — previously
-        // it was defined but never invoked anywhere, so on some deployments
-        // the app was silently running against a schema that only partially
-        // matched the query code (see src/routes/state.js and
-        // src/routes/restaurants.js for the matching identifier-quoting fix).
         await initTables();
     } catch (err) {
         console.error('PostgreSQL schema initialization failed:', err.message);
         process.exit(1); // Do not serve traffic against an unmigrated DB
     }
+
+    // Start daily backup scheduler
+    startBackupScheduler();
 
     app.listen(PORT, () => {
         console.log(`NAAV ERP Backend running on port ${PORT}`);

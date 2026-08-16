@@ -21,3 +21,8 @@ Thumbs.db
 
 # Scratch and temporary work files
 scratch/
+
+# Database Backups
+backups/
+naav_accounts_backup_*.json
+naav_accounts_emergency_pre_restore_*.json
