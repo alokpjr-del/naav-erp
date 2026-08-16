@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+let runtimeRefreshToken = null;
+const activeStateTokens = new Set();
+
 function base64UrlEncode(strOrBuffer) {
     const buf = Buffer.isBuffer(strOrBuffer) ? strOrBuffer : Buffer.from(strOrBuffer, 'utf8');
     return buf.toString('base64')
@@ -10,7 +13,120 @@ function base64UrlEncode(strOrBuffer) {
         .replace(/\//g, '_');
 }
 
-// Locate Service Account Key File / Environment Variable
+// Get Redirect URI based on request host or production default
+function getRedirectUri(reqHost) {
+    if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
+        return process.env.GOOGLE_OAUTH_REDIRECT_URI;
+    }
+    if (reqHost && (reqHost.includes('localhost') || reqHost.includes('127.0.0.1'))) {
+        return `http://${reqHost}/api/backup/oauth2callback`;
+    }
+    return 'https://naav-erp.onrender.com/api/backup/oauth2callback';
+}
+
+// Generate OAuth2 Consent Authorization URL with CSRF protection
+function getOAuth2AuthUrl(reqHost) {
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    if (!clientId) {
+        throw new Error('GOOGLE_OAUTH_CLIENT_ID environment variable is missing.');
+    }
+
+    const redirectUri = getRedirectUri(reqHost);
+    const stateToken = crypto.randomBytes(24).toString('hex');
+    activeStateTokens.add(stateToken);
+
+    // Expire state token after 15 minutes
+    setTimeout(() => activeStateTokens.delete(stateToken), 15 * 60 * 1000);
+
+    const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        access_type: 'offline',
+        prompt: 'consent',
+        state: stateToken
+    });
+
+    return {
+        authUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+        redirectUri
+    };
+}
+
+// Server-side OAuth2 Callback Code Exchange
+async function handleOAuth2Callback(code, state, reqHost) {
+    if (!state || !activeStateTokens.has(state)) {
+        throw new Error('OAUTH2 CSRF VALIDATION FAILED: Invalid or expired state parameter.');
+    }
+    activeStateTokens.delete(state);
+
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        throw new Error('GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET environment variable is missing.');
+    }
+
+    const redirectUri = getRedirectUri(reqHost);
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            code: code,
+            grant_type: 'authorization_code',
+            redirect_uri: redirectUri
+        })
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok) {
+        throw new Error(`OAuth2 Authorization Exchange Failed: ${tokenData.error_description || tokenData.error || tokenRes.statusText}`);
+    }
+
+    if (tokenData.refresh_token) {
+        runtimeRefreshToken = tokenData.refresh_token;
+    }
+
+    return {
+        success: true,
+        message: 'Google Drive authorization successful. Backup service is now connected to Google Drive.'
+    };
+}
+
+// Obtain OAuth2 Access Token using Refresh Token
+async function getOAuth2AccessToken() {
+    const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN || runtimeRefreshToken;
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+    if (!refreshToken || !clientId || !clientSecret) {
+        return null;
+    }
+
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+        })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+        throw new Error(`OAuth2 Refresh Token Exchange Failed: ${data.error_description || data.error || res.statusText}`);
+    }
+
+    return data.access_token;
+}
+
+// Service Account Credentials Fallback Helper
 function findServiceAccountCredentials() {
     const candidates = [
         process.env.GOOGLE_APPLICATION_CREDENTIALS,
@@ -31,7 +147,7 @@ function findServiceAccountCredentials() {
             try {
                 const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
                 if (content.client_email && content.private_key) {
-                    return { source: `Secret File: ${filePath}`, creds: content, secretPath: filePath };
+                    return { creds: content, secretPath: filePath };
                 }
             } catch (e) {}
         }
@@ -41,7 +157,7 @@ function findServiceAccountCredentials() {
         try {
             const content = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
             if (content.client_email && content.private_key) {
-                return { source: 'Environment Variable: GOOGLE_SERVICE_ACCOUNT_JSON', creds: content, secretPath: 'ENV_VAR' };
+                return { creds: content, secretPath: 'ENV_VAR' };
             }
         } catch (e) {}
     }
@@ -49,13 +165,13 @@ function findServiceAccountCredentials() {
     return null;
 }
 
-// Exchange RS256 Signed JWT for Google OAuth2 Access Token
-async function getGoogleAccessToken(creds) {
+// Exchange RS256 Signed JWT for Service Account Token
+async function getServiceAccountAccessToken(creds) {
     const now = Math.floor(Date.now() / 1000);
     const header = { alg: 'RS256', typ: 'JWT' };
     const claimSet = {
         iss: creds.client_email,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive',
+        scope: 'https://www.googleapis.com/auth/drive.file',
         aud: 'https://oauth2.googleapis.com/token',
         exp: now + 3600,
         iat: now
@@ -83,72 +199,42 @@ async function getGoogleAccessToken(creds) {
 
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok) {
-        throw new Error(`Google Auth Failed: ${tokenData.error_description || tokenData.error || tokenRes.statusText}`);
+        throw new Error(`Service Account Auth Failed: ${tokenData.error_description || tokenData.error || tokenRes.statusText}`);
     }
 
     return tokenData.access_token;
 }
 
-// Find or Create Google Drive Folder "NAAV BACKUPS"
-async function getOrCreateBackupFolder(accessToken, folderName = 'NAAV BACKUPS') {
-    if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
-        return process.env.GOOGLE_DRIVE_FOLDER_ID;
-    }
-
-    // Search for existing folder
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`)}&fields=files(id,name)`;
-    const searchRes = await fetch(searchUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        if (searchData.files && searchData.files.length > 0) {
-            return searchData.files[0].id;
-        }
-    }
-
-    // Create new folder if not found
-    console.log(`Creating new Google Drive folder: "${folderName}"...`);
-    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            name: folderName,
-            mimeType: 'application/vnd.google-apps.folder'
-        })
-    });
-
-    const createData = await createRes.json();
-    if (!createRes.ok) {
-        throw new Error(`Failed to create Google Drive folder "${folderName}": ${createData.error?.message || createRes.statusText}`);
-    }
-
-    return createData.id;
-}
-
-// Upload Backup File to Google Drive "NAAV BACKUPS" Folder
+// Main Google Drive Upload Engine (OAuth2 User Auth Primary, Service Account Fallback)
 async function uploadBackupToGoogleDrive(filename, contentString) {
-    const credsInfo = findServiceAccountCredentials();
-    if (!credsInfo) {
-        return {
-            success: false,
-            status: 'SKIPPED_NO_CREDENTIALS',
-            message: 'Google service account key file not found in /etc/secrets/ or env var.'
-        };
-    }
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '1uwr0wW36z1_i1yBvzetAf-TXIXHE8NdL';
+    let accessToken = null;
+    let authMethod = 'OAuth2 User Authorization';
 
     try {
-        console.log(`[Google Drive] Authenticating service account: ${credsInfo.creds.client_email}`);
-        const accessToken = await getGoogleAccessToken(credsInfo.creds);
+        // 1. Attempt OAuth2 Access Token First
+        accessToken = await getOAuth2AccessToken();
 
-        const folderName = process.env.GOOGLE_DRIVE_FOLDER_NAME || 'NAAV BACKUPS';
-        const folderId = await getOrCreateBackupFolder(accessToken, folderName);
+        // 2. Fallback to Service Account if OAuth2 credentials not set
+        if (!accessToken) {
+            const saCreds = findServiceAccountCredentials();
+            if (saCreds) {
+                authMethod = `Service Account Fallback (${saCreds.creds.client_email})`;
+                accessToken = await getServiceAccountAccessToken(saCreds.creds);
+            }
+        }
 
-        // Check for duplicate file
+        if (!accessToken) {
+            return {
+                success: false,
+                status: 'SKIPPED_NO_CREDENTIALS',
+                message: 'Google Drive credentials not configured. Using local disk fallback.'
+            };
+        }
+
+        console.log(`[Google Drive] Authenticated using: ${authMethod}. Target Folder ID: ${folderId}`);
+
+        // Check for duplicate file in target folder
         const checkUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${filename}' and '${folderId}' in parents and trashed = false`)}&fields=files(id,name)`;
         const checkRes = await fetch(checkUrl, {
             headers: { Authorization: `Bearer ${accessToken}` }
@@ -157,20 +243,19 @@ async function uploadBackupToGoogleDrive(filename, contentString) {
         if (checkRes.ok) {
             const checkData = await checkRes.json();
             if (checkData.files && checkData.files.length > 0) {
-                console.log(`[Google Drive] File ${filename} already exists in Google Drive folder "${folderName}" (${checkData.files[0].id}). Skipping duplicate upload.`);
+                console.log(`[Google Drive] File ${filename} already exists in folder ${folderId} (${checkData.files[0].id}). Skipping duplicate upload.`);
                 return {
                     success: true,
                     status: 'ALREADY_EXISTS',
                     fileId: checkData.files[0].id,
                     folderId,
-                    folderName,
-                    serviceAccount: credsInfo.creds.client_email
+                    authMethod
                 };
             }
         }
 
-        // Upload new file via multipart upload
-        console.log(`[Google Drive] Uploading ${filename} to Google Drive folder "${folderName}" (${folderId})...`);
+        // Upload file via multipart upload
+        console.log(`[Google Drive] Uploading ${filename} to folder ID "${folderId}"...`);
         const boundary = '-------314159265358979323846';
         const delimiter = `\r\n--${boundary}\r\n`;
         const closeDelimiter = `\r\n--${boundary}--`;
@@ -211,9 +296,7 @@ async function uploadBackupToGoogleDrive(filename, contentString) {
             status: 'SUCCESS',
             fileId: uploadData.id,
             folderId,
-            folderName,
-            serviceAccount: credsInfo.creds.client_email,
-            secretPathUsed: credsInfo.secretPath
+            authMethod
         };
     } catch (e) {
         console.error('[Google Drive Upload Error]:', e.message);
@@ -225,7 +308,14 @@ async function uploadBackupToGoogleDrive(filename, contentString) {
     }
 }
 
+function setRuntimeRefreshToken(token) {
+    runtimeRefreshToken = token;
+}
+
 module.exports = {
-    findServiceAccountCredentials,
-    uploadBackupToGoogleDrive
+    getOAuth2AuthUrl,
+    handleOAuth2Callback,
+    uploadBackupToGoogleDrive,
+    setRuntimeRefreshToken,
+    findServiceAccountCredentials
 };
