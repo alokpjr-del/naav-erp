@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 let runtimeRefreshToken = null;
-const activeStateTokens = new Set();
+const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 function base64UrlEncode(strOrBuffer) {
     const buf = Buffer.isBuffer(strOrBuffer) ? strOrBuffer : Buffer.from(strOrBuffer, 'utf8');
@@ -24,7 +24,69 @@ function getRedirectUri(reqHost) {
     return 'https://naav-erp.onrender.com/api/backup/oauth2callback';
 }
 
-// Generate OAuth2 Consent Authorization URL with CSRF protection
+// Get HMAC Signing Secret for Stateless CSRF Protection
+// Configure GOOGLE_OAUTH_STATE_SECRET in Render Environment Variables for dedicated secret key
+function getHMACSecret() {
+    return process.env.GOOGLE_OAUTH_STATE_SECRET ||
+           process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
+           'naav_accounts_oauth2_default_fallback_state_secret_2026';
+}
+
+// Generate Cryptographically Signed Stateless OAuth2 CSRF State Token (Valid for 10 minutes)
+function generateOAuthState() {
+    const timestamp = Date.now().toString();
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const payload = `${timestamp}.${nonce}`;
+
+    const hmac = crypto.createHmac('sha256', getHMACSecret());
+    hmac.update(payload);
+    const signature = hmac.digest('hex');
+
+    return `${payload}.${signature}`;
+}
+
+// Verify Cryptographic Signature and Expiry of OAuth2 CSRF State Token
+function verifyOAuthState(state) {
+    if (!state || typeof state !== 'string') {
+        return { valid: false, reason: 'Missing state parameter.' };
+    }
+
+    const parts = state.split('.');
+    if (parts.length !== 3) {
+        return { valid: false, reason: 'Invalid state parameter format.' };
+    }
+
+    const [timestampStr, nonce, receivedSignature] = parts;
+    const timestamp = parseInt(timestampStr, 10);
+
+    if (isNaN(timestamp)) {
+        return { valid: false, reason: 'Invalid state timestamp.' };
+    }
+
+    // Check expiry (10 minutes max lifetime)
+    const age = Date.now() - timestamp;
+    if (age < 0 || age > STATE_TTL_MS) {
+        return { valid: false, reason: 'OAuth2 state parameter has expired (max lifetime: 10 minutes).' };
+    }
+
+    // Compute expected signature
+    const payload = `${timestampStr}.${nonce}`;
+    const hmac = crypto.createHmac('sha256', getHMACSecret());
+    hmac.update(payload);
+    const expectedSignature = hmac.digest('hex');
+
+    // Timing-safe signature comparison
+    const sigBuffer = Buffer.from(receivedSignature, 'utf8');
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+
+    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+        return { valid: false, reason: 'Tampered state parameter or invalid signature.' };
+    }
+
+    return { valid: true };
+}
+
+// Generate OAuth2 Consent Authorization URL with Signed CSRF Protection
 function getOAuth2AuthUrl(reqHost) {
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     if (!clientId) {
@@ -32,11 +94,7 @@ function getOAuth2AuthUrl(reqHost) {
     }
 
     const redirectUri = getRedirectUri(reqHost);
-    const stateToken = crypto.randomBytes(24).toString('hex');
-    activeStateTokens.add(stateToken);
-
-    // Expire state token after 15 minutes
-    setTimeout(() => activeStateTokens.delete(stateToken), 15 * 60 * 1000);
+    const stateToken = generateOAuthState();
 
     const params = new URLSearchParams({
         client_id: clientId,
@@ -56,10 +114,10 @@ function getOAuth2AuthUrl(reqHost) {
 
 // Server-side OAuth2 Callback Code Exchange
 async function handleOAuth2Callback(code, state, reqHost) {
-    if (!state || !activeStateTokens.has(state)) {
-        throw new Error('OAUTH2 CSRF VALIDATION FAILED: Invalid or expired state parameter.');
+    const verification = verifyOAuthState(state);
+    if (!verification.valid) {
+        throw new Error(`OAUTH2 CSRF VALIDATION FAILED: ${verification.reason}`);
     }
-    activeStateTokens.delete(state);
 
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
@@ -313,6 +371,8 @@ function setRuntimeRefreshToken(token) {
 }
 
 module.exports = {
+    generateOAuthState,
+    verifyOAuthState,
     getOAuth2AuthUrl,
     handleOAuth2Callback,
     uploadBackupToGoogleDrive,
