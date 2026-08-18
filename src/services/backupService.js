@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('../postgres');
+const { S3Client, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 
 const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
 const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -28,6 +29,7 @@ let lastBackupInfo = {
     sizeBytes: 0,
     recordCounts: {},
     error: null,
+    filebaseStatus: { status: 'NOT_RUN' },
     nextScheduledBackup: null
 };
 
@@ -50,7 +52,84 @@ function getFormattedTimestamp(date = new Date()) {
     return `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
 }
 
-// Optional S3/R2 Cloud Storage Upload Helper
+// Filebase S3-Compatible Cloud Backup Upload Helper
+async function uploadToFilebase(filename, contentString) {
+    const key = process.env.FILEBASE_KEY;
+    const secret = process.env.FILEBASE_SECRET;
+    const bucket = process.env.FILEBASE_BUCKET || 'naav-accounts-backup';
+    const endpoint = process.env.FILEBASE_ENDPOINT || 'https://s3.filebase.io';
+    const region = process.env.FILEBASE_REGION || 'us-east-1';
+
+    if (!key || !secret) {
+        return { status: 'SKIPPED_NO_CREDENTIALS', message: 'Filebase credentials (FILEBASE_KEY / FILEBASE_SECRET) not configured.' };
+    }
+
+    try {
+        const client = new S3Client({
+            endpoint,
+            region,
+            credentials: {
+                accessKeyId: key,
+                secretAccessKey: secret
+            },
+            forcePathStyle: true
+        });
+
+        const objectKey = `backups/${filename}`;
+        const command = new PutObjectCommand({
+            Bucket: bucket,
+            Key: objectKey,
+            Body: contentString,
+            ContentType: 'application/json'
+        });
+
+        await client.send(command);
+        console.log(`[Filebase S3 Upload Status]: SUCCESS (Bucket: "${bucket}", Key: "${objectKey}")`);
+        return {
+            status: 'SUCCESS',
+            bucket,
+            key: objectKey,
+            endpoint
+        };
+    } catch (e) {
+        console.error('[Filebase S3 Upload Status]: FAILED -', e.message);
+        return {
+            status: 'FAILED',
+            error: e.message
+        };
+    }
+}
+
+// Helper to verify object existence in Filebase S3 Bucket
+async function verifyFilebaseObject(objectKey) {
+    const key = process.env.FILEBASE_KEY;
+    const secret = process.env.FILEBASE_SECRET;
+    const bucket = process.env.FILEBASE_BUCKET || 'naav-accounts-backup';
+    const endpoint = process.env.FILEBASE_ENDPOINT || 'https://s3.filebase.io';
+    const region = process.env.FILEBASE_REGION || 'us-east-1';
+
+    if (!key || !secret) return { exists: false, reason: 'No credentials' };
+
+    try {
+        const client = new S3Client({
+            endpoint,
+            region,
+            credentials: {
+                accessKeyId: key,
+                secretAccessKey: secret
+            },
+            forcePathStyle: true
+        });
+
+        const command = new HeadObjectCommand({ Bucket: bucket, Key: objectKey });
+        const res = await client.send(command);
+        return { exists: true, sizeBytes: res.ContentLength, lastModified: res.LastModified };
+    } catch (e) {
+        return { exists: false, error: e.message };
+    }
+}
+
+// Optional AWS S3 / Cloudflare R2 Cloud Storage Upload Helper
 async function uploadToS3Cloud(filename, filePath, contentString) {
     const bucket = process.env.S3_BUCKET_NAME;
     const accessKey = process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
@@ -117,7 +196,10 @@ async function createDatabaseBackup(isEmergency = false) {
     const fileStats = fs.statSync(filePath);
     const sizeBytes = fileStats.size;
 
-    // Optional upload to S3/Cloudflare R2
+    // Upload backup JSON file to Filebase S3-compatible storage (non-blocking)
+    const filebaseStatus = await uploadToFilebase(filename, contentString);
+
+    // Optional upload to generic AWS S3 / Cloudflare R2
     const cloudStatus = await uploadToS3Cloud(filename, filePath, contentString);
 
     const nextRun = new Date(startTime.getTime() + BACKUP_INTERVAL_MS);
@@ -130,6 +212,7 @@ async function createDatabaseBackup(isEmergency = false) {
         sizeBytes,
         recordCounts,
         error: null,
+        filebaseStatus,
         cloudStatus,
         nextScheduledBackup: nextRun.toISOString()
     };
@@ -171,7 +254,8 @@ async function getBackupStatus() {
         liveProductionCounts: liveCounts,
         totalHistoricalBackups: recentFiles.length,
         recentBackups: recentFiles.slice(0, 10),
-        storageTarget: process.env.S3_BUCKET_NAME ? `Cloudflare R2 / AWS S3 (${process.env.S3_BUCKET_NAME})` : 'Local Persistent Disk (backups/)'
+        filebaseTarget: process.env.FILEBASE_KEY ? `Filebase S3 Bucket "${process.env.FILEBASE_BUCKET || 'naav-accounts-backup'}"` : 'Filebase Credentials Not Configured',
+        storageTarget: process.env.FILEBASE_KEY ? `Filebase S3 (${process.env.FILEBASE_BUCKET || 'naav-accounts-backup'}) & Local Persistent Disk (backups/)` : 'Local Persistent Disk (backups/)'
     };
 }
 
@@ -235,6 +319,7 @@ module.exports = {
     getBackupStatus,
     startBackupScheduler,
     restoreFromBackupPayload,
+    verifyFilebaseObject,
     BACKUP_DIR,
     REQUIRED_TABLES
 };
