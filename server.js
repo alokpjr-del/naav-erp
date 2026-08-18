@@ -73,26 +73,25 @@ app.use((err, req, res, next) => {
 });
 
 async function startServer() {
-    try {
-        await testConnection();
-    } catch (err) {
-        console.error('PostgreSQL connection failed:', err.message);
-        process.exit(1); // Do not serve traffic against a DB we can't reach
-    }
-
-    try {
-        await initTables();
-    } catch (err) {
-        console.error('PostgreSQL schema initialization failed:', err.message);
-        process.exit(1); // Do not serve traffic against an unmigrated DB
-    }
-
-    // Start daily backup scheduler
-    startBackupScheduler();
-
-    app.listen(PORT, () => {
+    // Bind HTTP server IMMEDIATELY on process.env.PORT (or 5000) on 0.0.0.0
+    // so Render port scanner detects open port instantly without timing out.
+    app.listen(PORT, '0.0.0.0', () => {
         console.log(`NAAV ERP Backend running on port ${PORT}`);
     });
+
+    try {
+        await testConnection();
+        await initTables();
+    } catch (err) {
+        console.error('PostgreSQL initialization error during boot:', err.message);
+    }
+
+    // Start daily backup scheduler asynchronously AFTER HTTP port is open
+    try {
+        startBackupScheduler();
+    } catch (err) {
+        console.error('Backup scheduler startup error:', err.message);
+    }
 }
 
 startServer();

@@ -33,20 +33,30 @@ function getRedirectUri(reqHost) {
 }
 
 // Get HMAC Signing Secret for Stateless CSRF Protection
-// Configure GOOGLE_OAUTH_STATE_SECRET in Render Environment Variables for dedicated secret key
-function getHMACSecret() {
-    return process.env.GOOGLE_OAUTH_STATE_SECRET ||
-           process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
-           'naav_accounts_oauth2_default_fallback_state_secret_2026';
+// Dedicated environment variable: GOOGLE_OAUTH_STATE_SECRET
+function getHMACSecret(overrideSecret) {
+    if (overrideSecret && typeof overrideSecret === 'string' && overrideSecret.trim().length > 0) {
+        return overrideSecret.trim();
+    }
+    const secret = process.env.GOOGLE_OAUTH_STATE_SECRET;
+    if (secret && typeof secret === 'string' && secret.trim().length > 0) {
+        return secret.trim();
+    }
+    return null;
 }
 
 // Generate Cryptographically Signed Stateless OAuth2 CSRF State Token (Valid for 10 minutes)
-function generateOAuthState() {
+function generateOAuthState(overrideSecret) {
+    const secret = getHMACSecret(overrideSecret);
+    if (!secret) {
+        throw new Error('GOOGLE_OAUTH_STATE_SECRET environment variable is missing. Please configure GOOGLE_OAUTH_STATE_SECRET in Render Environment Variables.');
+    }
+
     const timestamp = Date.now().toString();
     const nonce = crypto.randomBytes(16).toString('hex');
     const payload = `${timestamp}.${nonce}`;
 
-    const hmac = crypto.createHmac('sha256', getHMACSecret());
+    const hmac = crypto.createHmac('sha256', secret);
     hmac.update(payload);
     const signature = hmac.digest('hex');
 
@@ -104,7 +114,16 @@ function parseOAuthState(rawState) {
 }
 
 // Verify Cryptographic Signature and Expiry of OAuth2 CSRF State Token
-function verifyOAuthState(state) {
+function verifyOAuthState(state, overrideSecret) {
+    const secret = getHMACSecret(overrideSecret);
+    const secretSource = overrideSecret ? 'OVERRIDE_SECRET' : 'GOOGLE_OAUTH_STATE_SECRET';
+    const secretConfigured = !!secret;
+
+    if (!secret) {
+        console.warn('[OAuth2 State Audit] Validation Failed: GOOGLE_OAUTH_STATE_SECRET is not configured.');
+        return { valid: false, reason: 'GOOGLE_OAUTH_STATE_SECRET environment variable is missing. Please configure GOOGLE_OAUTH_STATE_SECRET in Render Environment Variables.' };
+    }
+
     if (!state || typeof state !== 'string') {
         console.warn('[OAuth2 State Audit] Validation Failed: Missing state parameter.');
         return { valid: false, reason: 'Missing state parameter.' };
@@ -112,10 +131,10 @@ function verifyOAuthState(state) {
 
     const parsed = parseOAuthState(state);
 
-    // Safe Diagnostic Logging (NO secret values or state strings logged)
+    // SAFE Diagnostic Logging (NO secret values or state strings logged)
     const timestampValid = parsed ? !isNaN(parseInt(parsed.timestampStr, 10)) : false;
     const sigLen = parsed && parsed.receivedSignature ? parsed.receivedSignature.length : 0;
-    console.log(`[OAuth2 State Audit] Raw Length: ${state.length}, Parsed Segments: ${parsed ? 3 : 0}, Timestamp Valid: ${timestampValid}, Sig Length: ${sigLen}`);
+    console.log(`[OAuth2 State Audit] Secret Source: ${secretSource}, Secret Configured: ${secretConfigured ? 'YES' : 'NO'}, HMAC Alg: sha256, Raw Length: ${state.length}, Parsed Segments: ${parsed ? 3 : 0}, Timestamp Valid: ${timestampValid}, Recv Sig Length: ${sigLen}`);
 
     if (!parsed) {
         return { valid: false, reason: 'Invalid state parameter format.' };
@@ -123,9 +142,9 @@ function verifyOAuthState(state) {
 
     const { timestampStr, nonce, receivedSignature } = parsed;
 
-    // 1. Compute expected HMAC signature first (Verify integrity BEFORE checking age)
+    // 1. Compute expected HMAC signature first using the exact same secret
     const payload = `${timestampStr}.${nonce}`;
-    const hmac = crypto.createHmac('sha256', getHMACSecret());
+    const hmac = crypto.createHmac('sha256', secret);
     hmac.update(payload);
     const expectedSignature = hmac.digest('hex');
 
