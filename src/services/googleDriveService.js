@@ -21,15 +21,18 @@ function base64UrlDecode(str) {
     return Buffer.from(base64, 'base64').toString('utf8');
 }
 
-// Get Redirect URI based on request host or production default
+// Get Redirect URI based on environment variable, request host, or production default (naavaccount.onrender.com)
 function getRedirectUri(reqHost) {
     if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
         return process.env.GOOGLE_OAUTH_REDIRECT_URI;
     }
-    if (reqHost && (reqHost.includes('localhost') || reqHost.includes('127.0.0.1'))) {
-        return `http://${reqHost}/api/backup/oauth2callback`;
+    if (reqHost) {
+        if (reqHost.includes('localhost') || reqHost.includes('127.0.0.1')) {
+            return `http://${reqHost}/api/backup/oauth2callback`;
+        }
+        return `https://${reqHost}/api/backup/oauth2callback`;
     }
-    return 'https://naav-erp.onrender.com/api/backup/oauth2callback';
+    return 'https://naavaccount.onrender.com/api/backup/oauth2callback';
 }
 
 // Get HMAC Signing Secret for Stateless CSRF Protection
