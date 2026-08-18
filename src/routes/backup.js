@@ -39,6 +39,7 @@ router.get('/auth-url', (req, res) => {
 router.get('/oauth2callback', async (req, res) => {
     try {
         // SAFE Diagnostic Query Audit (NO secret values, codes, or token values logged)
+        const rawUrlLen = (req.url || '').length;
         const queryKeys = Object.keys(req.query || {});
         const stateRaw = req.query ? req.query.state : undefined;
         const stateType = typeof stateRaw;
@@ -49,7 +50,7 @@ router.get('/oauth2callback', async (req, res) => {
         const rawStateMatches = (req.url || '').match(/[?&]state=([^&]*)/g) || [];
         const numStateParamsInUrl = rawStateMatches.length;
 
-        console.log(`[OAuth2 Callback Audit] Query Keys: [${queryKeys.join(', ')}], State Type: ${stateType}, Is Array: ${stateIsArray}, State Str Len: ${stateStr.length}, State SHA-256: ${stateHash}, Num State Params In URL: ${numStateParamsInUrl}`);
+        console.log(`[OAuth2 Callback Audit] Raw URL Len: ${rawUrlLen}, Query Keys: [${queryKeys.join(', ')}], State Type: ${stateType}, Is Array: ${stateIsArray}, State Str Len: ${stateStr.length}, State SHA-256: ${stateHash}, Num State Params In URL: ${numStateParamsInUrl}`);
 
         const { code, state, error } = req.query;
         if (error) {
@@ -61,7 +62,7 @@ router.get('/oauth2callback', async (req, res) => {
         }
 
         const host = req.get('host');
-        const result = await handleOAuth2Callback(code, state, host);
+        const result = await handleOAuth2Callback(code, state, host, req);
 
         // Safe HTML response displaying NO secret tokens
         res.send(`

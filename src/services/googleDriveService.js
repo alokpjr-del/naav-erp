@@ -21,6 +21,82 @@ function base64UrlDecode(str) {
     return Buffer.from(base64, 'base64').toString('utf8');
 }
 
+function getCharCategory(ch) {
+    if (/[A-Za-z0-9]/.test(ch)) return 'alphaNum';
+    if (ch === '-') return 'dash';
+    if (ch === '_') return 'underscore';
+    if (ch === '%') return 'percent';
+    if (ch === '=') return 'equals';
+    if (ch === '+') return 'plus';
+    if (ch === '/') return 'slash';
+    if (ch === ':') return 'colon';
+    if (ch === '.') return 'dot';
+    if (ch === '?') return 'question';
+    if (ch === '&') return 'amp';
+    if (/\s/.test(ch)) return 'whitespace';
+    return 'otherSpecial';
+}
+
+// SAFE Helper for Detailed Structural Diagnostics (NO secret values or tokens logged)
+function getStateDetailedDiagnostics(stateInput, req) {
+    const stateStr = Array.isArray(stateInput) ? String(stateInput[0] || '') : String(stateInput || '');
+    const stateSha256 = crypto.createHash('sha256').update(stateStr).digest('hex');
+
+    const alphaNumCount = (stateStr.match(/[A-Za-z0-9]/g) || []).length;
+    const dashCount = (stateStr.match(/-/g) || []).length;
+    const underscoreCount = (stateStr.match(/_/g) || []).length;
+    const percentCount = (stateStr.match(/%/g) || []).length;
+    const equalsCount = (stateStr.match(/=/g) || []).length;
+    const plusCount = (stateStr.match(/\+/g) || []).length;
+    const slashCount = (stateStr.match(/\//g) || []).length;
+    const colonCount = (stateStr.match(/:/g) || []).length;
+    const dotCount = (stateStr.match(/\./g) || []).length;
+    const questionCount = (stateStr.match(/\?/g) || []).length;
+    const ampCount = (stateStr.match(/&/g) || []).length;
+    const whitespaceCount = (stateStr.match(/\s/g) || []).length;
+    const nonBase64UrlCount = (stateStr.match(/[^A-Za-z0-9_-]/g) || []).length;
+    const percentEscapesCount = (stateStr.match(/%[0-9a-fA-F]{2}/g) || []).length;
+    const isEntirelyBase64Url = /^[A-Za-z0-9_-]+$/.test(stateStr);
+
+    const first3Categories = stateStr.slice(0, 3).split('').map(getCharCategory);
+    const last3Categories = stateStr.slice(-3).split('').map(getCharCategory);
+
+    let base64DecodedByteLength = null;
+    try {
+        let clean = stateStr.replace(/-/g, '+').replace(/_/g, '/');
+        while (clean.length % 4) clean += '=';
+        const buf = Buffer.from(clean, 'base64');
+        base64DecodedByteLength = buf.length;
+    } catch (e) {}
+
+    return {
+        reqUrlLen: req ? (req.url || '').length : null,
+        reqOriginalUrlLen: req ? (req.originalUrl || '').length : null,
+        stateLen: stateStr.length,
+        stateSha256,
+        charCounts: {
+            alphaNum: alphaNumCount,
+            dash: dashCount,
+            underscore: underscoreCount,
+            percent: percentCount,
+            equals: equalsCount,
+            plus: plusCount,
+            slash: slashCount,
+            colon: colonCount,
+            dot: dotCount,
+            question: questionCount,
+            amp: ampCount,
+            whitespace: whitespaceCount
+        },
+        first3Categories,
+        last3Categories,
+        nonBase64UrlCount,
+        percentEscapesCount,
+        isEntirelyBase64Url,
+        base64DecodedByteLength
+    };
+}
+
 // Get Redirect URI based on environment variable, request host, or production default (naavaccount.onrender.com)
 function getRedirectUri(reqHost) {
     if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
@@ -88,10 +164,12 @@ function parseOAuthState(rawStateInput) {
 
     let str = rawState.trim();
 
-    // 1. Try URL decoding if percentage encoded
+    // 1. Try URL decoding recursively if percentage encoded
     try {
-        if (str.includes('%')) {
+        let decodeLimit = 3;
+        while (str.includes('%') && decodeLimit > 0) {
             str = decodeURIComponent(str);
+            decodeLimit--;
         }
     } catch (e) {}
 
@@ -110,7 +188,8 @@ function parseOAuthState(rawStateInput) {
             timestampStr: parts[0],
             nonce: parts[1],
             receivedSignature: parts[2],
-            rawFormat: 'dot_separated'
+            rawFormat: 'dot_separated',
+            segmentLens: { timestampLen: parts[0].length, nonceLen: parts[1].length, signatureLen: parts[2].length }
         };
     }
 
@@ -121,7 +200,8 @@ function parseOAuthState(rawStateInput) {
             timestampStr: parts[0],
             nonce: parts[1],
             receivedSignature: parts[2],
-            rawFormat: 'raw_dot_separated'
+            rawFormat: 'raw_dot_separated',
+            segmentLens: { timestampLen: parts[0].length, nonceLen: parts[1].length, signatureLen: parts[2].length }
         };
     }
 
@@ -129,7 +209,7 @@ function parseOAuthState(rawStateInput) {
 }
 
 // Verify Cryptographic Signature and Expiry of OAuth2 CSRF State Token
-function verifyOAuthState(stateInput, overrideSecret) {
+function verifyOAuthState(stateInput, overrideSecret, req) {
     const secret = getHMACSecret(overrideSecret);
     const secretSource = overrideSecret ? 'OVERRIDE_SECRET' : 'GOOGLE_OAUTH_STATE_SECRET';
     const secretConfigured = !!secret;
@@ -144,16 +224,17 @@ function verifyOAuthState(stateInput, overrideSecret) {
         return { valid: false, reason: 'Missing state parameter.' };
     }
 
-    const stateStr = Array.isArray(stateInput) ? stateInput[0] : String(stateInput);
-    const recvStateSha256 = crypto.createHash('sha256').update(stateStr).digest('hex');
+    const stateStr = Array.isArray(stateInput) ? String(stateInput[0] || '') : String(stateInput || '');
+    const diag = getStateDetailedDiagnostics(stateInput, req);
 
     const parsed = parseOAuthState(stateInput);
     const timestampValid = parsed ? !isNaN(parseInt(parsed.timestampStr, 10)) : false;
     const sigLen = parsed && parsed.receivedSignature ? parsed.receivedSignature.length : 0;
     const secretLen = secret ? secret.length : 0;
+    const segmentLens = parsed ? parsed.segmentLens : null;
 
     if (!parsed) {
-        console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Received State Len: ${stateStr.length}, Received State SHA-256: ${recvStateSha256}, Parsed Segments: 0, Timestamp Valid: false, Recv Sig Len: 0`);
+        console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Diag: ${JSON.stringify(diag)}, Parsed Segments: 0, Timestamp Valid: false, Recv Sig Len: 0`);
         return { valid: false, reason: 'Invalid state parameter format.' };
     }
 
@@ -166,7 +247,7 @@ function verifyOAuthState(stateInput, overrideSecret) {
     const expectedSignature = hmac.digest('hex');
 
     // SAFE SHA-256 Hash Diagnostic Logging (NO secret values or state tokens logged)
-    console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Received State Len: ${stateStr.length}, Received State SHA-256: ${recvStateSha256}, Parsed Segments: 3, Timestamp Valid: ${timestampValid}, Recv Sig Len: ${sigLen}, Expected Sig Len: ${expectedSignature.length}`);
+    console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Diag: ${JSON.stringify(diag)}, SegmentLens: ${JSON.stringify(segmentLens)}, Parsed Segments: 3, Timestamp Valid: ${timestampValid}, Recv Sig Len: ${sigLen}, Expected Sig Len: ${expectedSignature.length}`);
 
     // Timing-safe signature comparison
     const sigBuffer = Buffer.from(receivedSignature, 'utf8');
@@ -211,10 +292,12 @@ function getOAuth2AuthUrl(reqHost) {
     });
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    const authUrlStateParam = new URL(authUrl).searchParams.get('state');
+    const parsedUrl = new URL(authUrl);
+    const stateParamsCount = parsedUrl.searchParams.getAll('state').length;
+    const authUrlStateParam = parsedUrl.searchParams.get('state');
     const authUrlStateSha256 = crypto.createHash('sha256').update(authUrlStateParam).digest('hex');
 
-    console.log(`[OAuth2 State Audit] [AUTH-URL] AuthUrl Generated. State Param Len: ${authUrlStateParam.length}, State SHA-256: ${authUrlStateSha256}`);
+    console.log(`[OAuth2 State Audit] [AUTH-URL] AuthUrl Host/Path: ${parsedUrl.hostname}${parsedUrl.pathname}, State Params Count: ${stateParamsCount}, State Param Len: ${authUrlStateParam.length}, State SHA-256: ${authUrlStateSha256}`);
 
     return {
         authUrl,
@@ -223,8 +306,8 @@ function getOAuth2AuthUrl(reqHost) {
 }
 
 // Server-side OAuth2 Callback Code Exchange
-async function handleOAuth2Callback(code, state, reqHost) {
-    const verification = verifyOAuthState(state);
+async function handleOAuth2Callback(code, state, reqHost, req) {
+    const verification = verifyOAuthState(state, undefined, req);
     if (!verification.valid) {
         throw new Error(`OAUTH2 CSRF VALIDATION FAILED: ${verification.reason}`);
     }
