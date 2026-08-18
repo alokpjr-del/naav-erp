@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const {
     createDatabaseBackup,
     getBackupStatus,
@@ -37,6 +38,19 @@ router.get('/auth-url', (req, res) => {
 // GET /api/backup/oauth2callback — Google OAuth2 Authorization Callback
 router.get('/oauth2callback', async (req, res) => {
     try {
+        // SAFE Diagnostic Query Audit (NO secret values, codes, or token values logged)
+        const queryKeys = Object.keys(req.query || {});
+        const stateRaw = req.query ? req.query.state : undefined;
+        const stateType = typeof stateRaw;
+        const stateIsArray = Array.isArray(stateRaw);
+        const stateStr = stateIsArray ? stateRaw[0] : String(stateRaw || '');
+        const stateHash = crypto.createHash('sha256').update(stateStr).digest('hex');
+
+        const rawStateMatches = (req.url || '').match(/[?&]state=([^&]*)/g) || [];
+        const numStateParamsInUrl = rawStateMatches.length;
+
+        console.log(`[OAuth2 Callback Audit] Query Keys: [${queryKeys.join(', ')}], State Type: ${stateType}, Is Array: ${stateIsArray}, State Str Len: ${stateStr.length}, State SHA-256: ${stateHash}, Num State Params In URL: ${numStateParamsInUrl}`);
+
         const { code, state, error } = req.query;
         if (error) {
             return res.status(400).send(`<h3>Google Drive Authorization Denied</h3><p>${error}</p>`);
@@ -88,61 +102,36 @@ router.post('/now', async (req, res) => {
     }
 });
 
-// GET /api/backup/download/latest — Admin Stream Download Latest Backup File
-router.get('/download/latest', async (req, res) => {
+// GET /api/backup/download/latest — Download Latest Local Backup
+router.get('/download/latest', (req, res) => {
     try {
-        const status = await getBackupStatus();
-        if (!status.lastBackup || !status.lastBackup.filePath || !fs.existsSync(status.lastBackup.filePath)) {
-            return res.status(404).json({ success: false, error: 'No backup file available for download.' });
+        if (!fs.existsSync(BACKUP_DIR)) {
+            return res.status(404).json({ success: false, error: 'No backups exist on disk.' });
         }
-
-        const filename = status.lastBackup.filename;
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        fs.createReadStream(status.lastBackup.filePath).pipe(res);
+        const files = fs.readdirSync(BACKUP_DIR)
+            .filter(f => f.startsWith('naav_accounts_backup_') && f.endsWith('.json'))
+            .sort().reverse();
+        if (files.length === 0) {
+            return res.status(404).json({ success: false, error: 'No backup files found.' });
+        }
+        const latestPath = path.join(BACKUP_DIR, files[0]);
+        res.download(latestPath, files[0]);
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
-// GET /api/backup/download/:filename — Download Specific Historical Backup File
-router.get('/download/:filename', async (req, res) => {
-    try {
-        const safeFilename = path.basename(req.params.filename);
-        const filePath = path.join(BACKUP_DIR, safeFilename);
-
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ success: false, error: 'Requested backup file not found.' });
-        }
-
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
-        fs.createReadStream(filePath).pipe(res);
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-// POST /api/backup/restore — Admin Manual Restore with Confirmation & Emergency Pre-Backup
+// POST /api/backup/restore — Safe Admin Restore Trigger
 router.post('/restore', async (req, res) => {
     try {
-        const { backupPayload, confirmRestore } = req.body;
-
-        if (!confirmRestore) {
-            return res.status(400).json({
-                success: false,
-                error: 'RESTORE REJECTED: You must explicitly confirm restoration by setting confirmRestore: true.'
-            });
+        const { backup, confirmRestore } = req.body;
+        if (!backup) {
+            return res.status(400).json({ success: false, error: 'Backup JSON payload is required.' });
         }
-
-        if (!backupPayload) {
-            return res.status(400).json({ success: false, error: 'RESTORE REJECTED: Backup payload JSON is required.' });
-        }
-
-        const result = await restoreFromBackupPayload(backupPayload, confirmRestore);
-        res.json({ success: true, message: 'Database restored safely.', ...result });
+        const result = await restoreFromBackupPayload(backup, confirmRestore);
+        res.json({ success: true, ...result });
     } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
+        res.status(400).json({ success: false, error: e.message });
     }
 });
 
