@@ -13,6 +13,14 @@ function base64UrlEncode(strOrBuffer) {
         .replace(/\//g, '_');
 }
 
+function base64UrlDecode(str) {
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+    return Buffer.from(base64, 'base64').toString('utf8');
+}
+
 // Get Redirect URI based on request host or production default
 function getRedirectUri(reqHost) {
     if (process.env.GOOGLE_OAUTH_REDIRECT_URI) {
@@ -42,34 +50,80 @@ function generateOAuthState() {
     hmac.update(payload);
     const signature = hmac.digest('hex');
 
-    return `${payload}.${signature}`;
+    const rawState = `${payload}.${signature}`;
+    // Base64Url encode to ensure URL-safe single string without special characters
+    return base64UrlEncode(rawState);
+}
+
+// Safe Helper to Parse State from URL, Base64Url, or Raw dot-separated formats
+function parseOAuthState(rawState) {
+    if (!rawState || typeof rawState !== 'string') {
+        return null;
+    }
+
+    let str = rawState.trim();
+
+    // 1. Try URL decoding if percentage encoded
+    try {
+        if (str.includes('%')) {
+            str = decodeURIComponent(str);
+        }
+    } catch (e) {}
+
+    // 2. Try Base64Url decode
+    let decodedStr = str;
+    try {
+        if (!str.includes('.')) {
+            decodedStr = base64UrlDecode(str);
+        }
+    } catch (e) {}
+
+    // 3. Try dot-separated split: timestamp.nonce.signature
+    let parts = decodedStr.split('.');
+    if (parts.length === 3) {
+        return {
+            timestampStr: parts[0],
+            nonce: parts[1],
+            receivedSignature: parts[2],
+            rawFormat: 'dot_separated'
+        };
+    }
+
+    // 4. Try dot-separated split on original string if Base64Url decode produced wrong format
+    parts = str.split('.');
+    if (parts.length === 3) {
+        return {
+            timestampStr: parts[0],
+            nonce: parts[1],
+            receivedSignature: parts[2],
+            rawFormat: 'raw_dot_separated'
+        };
+    }
+
+    return null;
 }
 
 // Verify Cryptographic Signature and Expiry of OAuth2 CSRF State Token
 function verifyOAuthState(state) {
     if (!state || typeof state !== 'string') {
+        console.warn('[OAuth2 State Audit] Validation Failed: Missing state parameter.');
         return { valid: false, reason: 'Missing state parameter.' };
     }
 
-    const parts = state.split('.');
-    if (parts.length !== 3) {
+    const parsed = parseOAuthState(state);
+
+    // Safe Diagnostic Logging (NO secret values or state strings logged)
+    const timestampValid = parsed ? !isNaN(parseInt(parsed.timestampStr, 10)) : false;
+    const sigLen = parsed && parsed.receivedSignature ? parsed.receivedSignature.length : 0;
+    console.log(`[OAuth2 State Audit] Raw Length: ${state.length}, Parsed Segments: ${parsed ? 3 : 0}, Timestamp Valid: ${timestampValid}, Sig Length: ${sigLen}`);
+
+    if (!parsed) {
         return { valid: false, reason: 'Invalid state parameter format.' };
     }
 
-    const [timestampStr, nonce, receivedSignature] = parts;
-    const timestamp = parseInt(timestampStr, 10);
+    const { timestampStr, nonce, receivedSignature } = parsed;
 
-    if (isNaN(timestamp)) {
-        return { valid: false, reason: 'Invalid state timestamp.' };
-    }
-
-    // Check expiry (10 minutes max lifetime)
-    const age = Date.now() - timestamp;
-    if (age < 0 || age > STATE_TTL_MS) {
-        return { valid: false, reason: 'OAuth2 state parameter has expired (max lifetime: 10 minutes).' };
-    }
-
-    // Compute expected signature
+    // 1. Compute expected HMAC signature first (Verify integrity BEFORE checking age)
     const payload = `${timestampStr}.${nonce}`;
     const hmac = crypto.createHmac('sha256', getHMACSecret());
     hmac.update(payload);
@@ -81,6 +135,17 @@ function verifyOAuthState(state) {
 
     if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
         return { valid: false, reason: 'Tampered state parameter or invalid signature.' };
+    }
+
+    // 2. Verify timestamp and expiry (10 minutes max lifetime)
+    const timestamp = parseInt(timestampStr, 10);
+    if (isNaN(timestamp)) {
+        return { valid: false, reason: 'Invalid state timestamp.' };
+    }
+
+    const age = Date.now() - timestamp;
+    if (age < 0 || age > STATE_TTL_MS) {
+        return { valid: false, reason: 'OAuth2 state parameter has expired (max lifetime: 10 minutes).' };
     }
 
     return { valid: true };
