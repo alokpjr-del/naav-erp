@@ -66,17 +66,24 @@ function generateOAuthState(overrideSecret) {
     const rawState = `${payload}.${signature}`;
     const encodedState = base64UrlEncode(rawState);
 
-    // SAFE Diagnostic Logging (NO secret values or state tokens logged)
+    // SAFE SHA-256 Hash Diagnostic Logging (NO secret values or state tokens logged)
     const secretSource = overrideSecret ? 'OVERRIDE_SECRET' : 'GOOGLE_OAUTH_STATE_SECRET';
-    console.log(`[OAuth2 State Audit] [GENERATE] Secret Source: ${secretSource}, Secret Length: ${secret.length}, HMAC Alg: sha256, Payload Len: ${payload.length}, Sig Len: ${signature.length}, Output State Len: ${encodedState.length}`);
+    const stateSha256 = crypto.createHash('sha256').update(encodedState).digest('hex');
+    console.log(`[OAuth2 State Audit] [GENERATE] Secret Source: ${secretSource}, Secret Length: ${secret.length}, HMAC Alg: sha256, Output State Len: ${encodedState.length}, State SHA-256: ${stateSha256}`);
 
     return encodedState;
 }
 
 // Safe Helper to Parse State from URL, Base64Url, or Raw dot-separated formats
-function parseOAuthState(rawState) {
-    if (!rawState || typeof rawState !== 'string') {
+function parseOAuthState(rawStateInput) {
+    if (!rawStateInput) {
         return null;
+    }
+
+    // Handle array if query string contains multiple state parameters
+    let rawState = Array.isArray(rawStateInput) ? rawStateInput[0] : rawStateInput;
+    if (typeof rawState !== 'string') {
+        rawState = String(rawState);
     }
 
     let str = rawState.trim();
@@ -122,7 +129,7 @@ function parseOAuthState(rawState) {
 }
 
 // Verify Cryptographic Signature and Expiry of OAuth2 CSRF State Token
-function verifyOAuthState(state, overrideSecret) {
+function verifyOAuthState(stateInput, overrideSecret) {
     const secret = getHMACSecret(overrideSecret);
     const secretSource = overrideSecret ? 'OVERRIDE_SECRET' : 'GOOGLE_OAUTH_STATE_SECRET';
     const secretConfigured = !!secret;
@@ -132,18 +139,21 @@ function verifyOAuthState(state, overrideSecret) {
         return { valid: false, reason: 'GOOGLE_OAUTH_STATE_SECRET environment variable is missing. Please configure GOOGLE_OAUTH_STATE_SECRET in Render Environment Variables.' };
     }
 
-    if (!state || typeof state !== 'string') {
+    if (!stateInput) {
         console.warn('[OAuth2 State Audit] [VERIFY] Validation Failed: Missing state parameter.');
         return { valid: false, reason: 'Missing state parameter.' };
     }
 
-    const parsed = parseOAuthState(state);
+    const stateStr = Array.isArray(stateInput) ? stateInput[0] : String(stateInput);
+    const recvStateSha256 = crypto.createHash('sha256').update(stateStr).digest('hex');
+
+    const parsed = parseOAuthState(stateInput);
     const timestampValid = parsed ? !isNaN(parseInt(parsed.timestampStr, 10)) : false;
     const sigLen = parsed && parsed.receivedSignature ? parsed.receivedSignature.length : 0;
     const secretLen = secret ? secret.length : 0;
 
     if (!parsed) {
-        console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Received State Len: ${state.length}, Parsed Segments: 0, Timestamp Valid: false, Recv Sig Len: 0`);
+        console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Received State Len: ${stateStr.length}, Received State SHA-256: ${recvStateSha256}, Parsed Segments: 0, Timestamp Valid: false, Recv Sig Len: 0`);
         return { valid: false, reason: 'Invalid state parameter format.' };
     }
 
@@ -155,8 +165,8 @@ function verifyOAuthState(state, overrideSecret) {
     hmac.update(payload);
     const expectedSignature = hmac.digest('hex');
 
-    // SAFE Diagnostic Logging (NO secret values or state tokens logged)
-    console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Received State Len: ${state.length}, Parsed Segments: 3, Timestamp Valid: ${timestampValid}, Recv Sig Len: ${sigLen}, Expected Sig Len: ${expectedSignature.length}`);
+    // SAFE SHA-256 Hash Diagnostic Logging (NO secret values or state tokens logged)
+    console.log(`[OAuth2 State Audit] [VERIFY] Secret Source: ${secretSource}, Secret Configured: YES, Secret Length: ${secretLen}, HMAC Alg: sha256, Received State Len: ${stateStr.length}, Received State SHA-256: ${recvStateSha256}, Parsed Segments: 3, Timestamp Valid: ${timestampValid}, Recv Sig Len: ${sigLen}, Expected Sig Len: ${expectedSignature.length}`);
 
     // Timing-safe signature comparison
     const sigBuffer = Buffer.from(receivedSignature, 'utf8');
@@ -200,8 +210,14 @@ function getOAuth2AuthUrl(reqHost) {
         state: stateToken
     });
 
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    const authUrlStateParam = new URL(authUrl).searchParams.get('state');
+    const authUrlStateSha256 = crypto.createHash('sha256').update(authUrlStateParam).digest('hex');
+
+    console.log(`[OAuth2 State Audit] [AUTH-URL] AuthUrl Generated. State Param Len: ${authUrlStateParam.length}, State SHA-256: ${authUrlStateSha256}`);
+
     return {
-        authUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+        authUrl,
         redirectUri
     };
 }
