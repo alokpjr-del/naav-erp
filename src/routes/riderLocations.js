@@ -2,13 +2,139 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('../postgres');
+
+const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
+const REVOKED_TOKENS_FILE = path.join(BACKUP_DIR, 'rider_revoked_tokens.json');
+const SECRET_KEY_FILE = path.join(BACKUP_DIR, 'rider_jwt_secret.key');
+
+// Ensure backups directory exists
+if (!fs.existsSync(BACKUP_DIR)) {
+    try { fs.mkdirSync(BACKUP_DIR, { recursive: true }); } catch (e) {}
+}
+
+// Resolution for Production Session Secret (No hardcoded fallback secret in source code)
+function getJwtSecret() {
+    const envSecret = process.env.RIDER_SESSION_SECRET || process.env.JWT_SECRET || process.env.SESSION_SECRET;
+    if (envSecret && envSecret.trim()) {
+        return envSecret.trim();
+    }
+
+    // Dynamic key resolution for environment without explicit secret env var
+    try {
+        if (fs.existsSync(SECRET_KEY_FILE)) {
+            const key = fs.readFileSync(SECRET_KEY_FILE, 'utf8').trim();
+            if (key) return key;
+        }
+    } catch (e) {}
+
+    const generatedKey = crypto.randomBytes(64).toString('hex');
+    try {
+        fs.writeFileSync(SECRET_KEY_FILE, generatedKey, 'utf8');
+    } catch (e) {}
+    return generatedKey;
+}
+
+const JWT_SECRET = getJwtSecret();
 
 // Active authenticated rider sessions: token -> { riderId, riderName, mobile, loginTime }
 const riderSessions = new Map();
 
 // Latest location & heartbeat store: riderId -> { riderId, riderName, latitude, longitude, accuracy, lastLocationAt, lastHeartbeatAt, gpsStatus, isLoggedOut, updatedAt }
 const riderLocationsStore = new Map();
+
+// Persistent Revoked Tokens Store (Survives server restarts)
+const revokedTokensSet = new Set();
+
+function loadRevokedTokens() {
+    try {
+        if (fs.existsSync(REVOKED_TOKENS_FILE)) {
+            const data = fs.readFileSync(REVOKED_TOKENS_FILE, 'utf8');
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) {
+                parsed.forEach(t => revokedTokensSet.add(t));
+            }
+        }
+    } catch (e) {}
+}
+
+function saveRevokedTokens() {
+    try {
+        const arr = Array.from(revokedTokensSet).slice(-1000); // Keep last 1000 revoked tokens
+        fs.writeFileSync(REVOKED_TOKENS_FILE, JSON.stringify(arr, null, 2), 'utf8');
+    } catch (e) {}
+}
+
+loadRevokedTokens();
+
+// --- HMAC-SHA256 JWT HELPERS ---
+function base64UrlEncode(str) {
+    return Buffer.from(str)
+        .toString('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+}
+
+function base64UrlDecode(str) {
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+    return Buffer.from(base64, 'base64').toString('utf8');
+}
+
+function generateRiderJwt(payload, expiresInDays = 30) {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const now = Math.floor(Date.now() / 1000);
+    const fullPayload = {
+        ...payload,
+        iat: now,
+        exp: now + (expiresInDays * 24 * 60 * 60)
+    };
+
+    const encodedHeader = base64UrlEncode(JSON.stringify(header));
+    const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
+
+    const signature = crypto
+        .createHmac('sha256', JWT_SECRET)
+        .update(`${encodedHeader}.${encodedPayload}`)
+        .digest('base64url');
+
+    return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+async function verifyRiderJwt(token) {
+    if (!token || typeof token !== 'string') return null;
+    if (revokedTokensSet.has(token)) return null;
+
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const [encodedHeader, encodedPayload, signature] = parts;
+
+    const expectedSignature = crypto
+        .createHmac('sha256', JWT_SECRET)
+        .update(`${encodedHeader}.${encodedPayload}`)
+        .digest('base64url');
+
+    if (signature !== expectedSignature) {
+        return null;
+    }
+
+    try {
+        const payload = JSON.parse(base64UrlDecode(encodedPayload));
+        const now = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < now) {
+            return null;
+        }
+        return payload;
+    } catch (e) {
+        return null;
+    }
+}
 
 // Helper to extract session token from request headers
 function getRiderToken(req) {
@@ -17,6 +143,62 @@ function getRiderToken(req) {
         return authHeader.substring(7).trim();
     }
     return (req.headers['x-rider-token'] || req.query.token || '').trim();
+}
+
+// Helper to resolve session (memory fast-path + stateless JWT fallback post-restart + revocation check)
+async function getAuthenticatedRiderSession(req) {
+    const token = getRiderToken(req);
+    if (!token) return null;
+
+    // Check revocation store
+    if (revokedTokensSet.has(token)) {
+        riderSessions.delete(token);
+        return null;
+    }
+
+    // Fast-path in-memory check
+    if (riderSessions.has(token)) {
+        return riderSessions.get(token);
+    }
+
+    // Stateless verification post server restart / redeploy
+    const decoded = await verifyRiderJwt(token);
+    if (!decoded || !decoded.riderId) return null;
+
+    // Check if rider account is still active in PostgreSQL
+    try {
+        const result = await pool.query(
+            `SELECT id, name, mobile, status FROM "deliveryBoys" WHERE id = $1`,
+            [decoded.riderId]
+        );
+
+        if (result.rows.length === 0 || result.rows[0].status === 'Inactive') {
+            revokedTokensSet.add(token);
+            saveRevokedTokens();
+            return null;
+        }
+
+        const rider = result.rows[0];
+        const sessionData = {
+            riderId: rider.id,
+            riderName: rider.name,
+            mobile: rider.mobile || '',
+            loginTime: (decoded.iat || Math.floor(Date.now() / 1000)) * 1000
+        };
+
+        // Re-hydrate in-memory session map
+        riderSessions.set(token, sessionData);
+        return sessionData;
+    } catch (e) {
+        const sessionData = {
+            riderId: decoded.riderId,
+            riderName: decoded.riderName,
+            mobile: decoded.mobile || '',
+            loginTime: (decoded.iat || Math.floor(Date.now() / 1000)) * 1000
+        };
+        riderSessions.set(token, sessionData);
+        return sessionData;
+    }
 }
 
 // POST /api/rider-login - Authenticate Rider
@@ -57,8 +239,13 @@ router.post('/rider-login', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Invalid Rider ID/Mobile or Password' });
         }
 
-        // Session Token Generation
-        const token = crypto.randomBytes(32).toString('hex');
+        // Signed JWT Token Generation (Valid 30 Days)
+        const token = generateRiderJwt({
+            riderId: rider.id,
+            riderName: rider.name,
+            mobile: rider.mobile || ''
+        }, 30);
+
         const sessionData = {
             riderId: rider.id,
             riderName: rider.name,
@@ -97,14 +284,12 @@ router.post('/rider-login', async (req, res) => {
 });
 
 // GET /api/rider-session - Verify current session
-router.get('/rider-session', (req, res) => {
+router.get('/rider-session', async (req, res) => {
     try {
-        const token = getRiderToken(req);
-        if (!token || !riderSessions.has(token)) {
-            return res.status(401).json({ success: false, error: 'Unauthorized rider session.' });
+        const session = await getAuthenticatedRiderSession(req);
+        if (!session) {
+            return res.status(401).json({ success: false, error: 'Unauthorized rider session.', code: 'SESSION_REVOKED' });
         }
-
-        const session = riderSessions.get(token);
 
         // Touch heartbeat on session verification
         const existing = riderLocationsStore.get(session.riderId) || {};
@@ -131,22 +316,27 @@ router.get('/rider-session', (req, res) => {
     }
 });
 
-// POST /api/rider-logout - Logout rider & invalidate session
-router.post('/rider-logout', (req, res) => {
+// POST /api/rider-logout - Logout rider & invalidate session (PERSISTENT REVOCATION)
+router.post('/rider-logout', async (req, res) => {
     try {
         const token = getRiderToken(req);
-        if (token && riderSessions.has(token)) {
-            const session = riderSessions.get(token);
-            if (session && session.riderId) {
-                const existing = riderLocationsStore.get(session.riderId) || {};
-                riderLocationsStore.set(session.riderId, {
-                    ...existing,
-                    isLoggedOut: true,
-                    updatedAt: new Date().toISOString()
-                });
-            }
-            riderSessions.delete(token);
+        const session = await getAuthenticatedRiderSession(req);
+
+        if (session && session.riderId) {
+            const existing = riderLocationsStore.get(session.riderId) || {};
+            riderLocationsStore.set(session.riderId, {
+                ...existing,
+                isLoggedOut: true,
+                updatedAt: new Date().toISOString()
+            });
         }
+
+        if (token) {
+            riderSessions.delete(token);
+            revokedTokensSet.add(token);
+            saveRevokedTokens();
+        }
+
         res.json({ success: true, message: 'Logged out successfully.' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -154,14 +344,13 @@ router.post('/rider-logout', (req, res) => {
 });
 
 // POST /api/rider-location - Update GPS Location (STRICT SESSION AUTHENTICATED)
-router.post('/rider-location', (req, res) => {
+router.post('/rider-location', async (req, res) => {
     try {
-        const token = getRiderToken(req);
-        if (!token || !riderSessions.has(token)) {
-            return res.status(401).json({ success: false, error: 'Unauthorized rider session. Please login first.' });
+        const session = await getAuthenticatedRiderSession(req);
+        if (!session) {
+            return res.status(401).json({ success: false, error: 'Unauthorized rider session. Please login first.', code: 'SESSION_REVOKED' });
         }
 
-        const session = riderSessions.get(token);
         const { latitude, longitude, accuracy, timestamp, gpsStatus } = req.body || {};
 
         if (latitude === undefined || longitude === undefined) {
@@ -197,14 +386,13 @@ router.post('/rider-location', (req, res) => {
 });
 
 // POST /api/rider-heartbeat - Lightweight Heartbeat Ping (STRICT SESSION AUTHENTICATED)
-router.post('/rider-heartbeat', (req, res) => {
+router.post('/rider-heartbeat', async (req, res) => {
     try {
-        const token = getRiderToken(req);
-        if (!token || !riderSessions.has(token)) {
-            return res.status(401).json({ success: false, error: 'Unauthorized rider session. Please login first.' });
+        const session = await getAuthenticatedRiderSession(req);
+        if (!session) {
+            return res.status(401).json({ success: false, error: 'Unauthorized rider session. Please login first.', code: 'SESSION_REVOKED' });
         }
 
-        const session = riderSessions.get(token);
         const { gpsStatus } = req.body || {};
         const nowMs = Date.now();
         const nowIso = new Date(nowMs).toISOString();

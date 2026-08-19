@@ -239,7 +239,7 @@ async function performRiderLogin() {
     }
 }
 
-// 2. CHECK SESSION ON LOAD
+// 2. CHECK SESSION ON LOAD (Fault Tolerant)
 async function checkExistingSession() {
     currentRiderToken = getSavedToken();
     if (!currentRiderToken) {
@@ -251,17 +251,22 @@ async function checkExistingSession() {
         const res = await fetch(SESSION_API, {
             headers: { 'Authorization': 'Bearer ' + currentRiderToken }
         });
-        const data = await res.json();
+
+        let data = {};
+        try { data = await res.json(); } catch(e) {}
+
         if (res.ok && data.success && data.rider) {
             currentRiderObj = data.rider;
             showAuthenticatedUI();
             startLocation();
             startHeartbeatTimer();
-        } else if (res.status === 401) {
+        } else if (res.status === 401 && (data.code === 'SESSION_REVOKED' || data.error)) {
+            // Truly revoked session -> clear token
             clearLocalToken();
             currentRiderToken = '';
             showLoginUI();
         } else {
+            // Server error / temporary network delay -> preserve logged in UI
             if (currentRiderToken) {
                 showAuthenticatedUI();
                 startLocation();
@@ -271,6 +276,7 @@ async function checkExistingSession() {
             }
         }
     } catch (e) {
+        // Network failure -> KEEP LOGGED IN
         if (currentRiderToken) {
             showAuthenticatedUI();
             startLocation();
@@ -301,7 +307,7 @@ function showAuthenticatedUI() {
     updateDiagnostics({ errorMsg: 'Authenticated & Active' });
 }
 
-// 3. LOGOUT HANDLER
+// 3. LOGOUT HANDLER (EXPLICIT LOGOUT IS THE ONLY MANUAL STOP CONDITION)
 async function performRiderLogout() {
     stopLocation();
     stopHeartbeatTimer();
@@ -340,9 +346,13 @@ async function sendHeartbeat() {
         });
 
         if (res.status === 401) {
-            showError('Rider session expired. Please login again.');
-            performRiderLogout();
-            return;
+            let data = {};
+            try { data = await res.json(); } catch(e) {}
+            if (data.code === 'SESSION_REVOKED') {
+                showError('Rider session expired or deactivated. Please login again.');
+                performRiderLogout();
+                return;
+            }
         }
 
         if (currentGpsStatus === 'active') {
@@ -427,13 +437,17 @@ async function renderPosition(p) {
             body: JSON.stringify(payload)
         });
 
-        const resData = await res.json();
         if (res.status === 401) {
-            showError('Rider session expired. Please login again.');
-            performRiderLogout();
-            return;
+            let data = {};
+            try { data = await res.json(); } catch(e) {}
+            if (data.code === 'SESSION_REVOKED') {
+                showError('Rider session expired or deactivated. Please login again.');
+                performRiderLogout();
+                return;
+            }
         }
 
+        const resData = await res.json().catch(() => ({}));
         setStatus(true, 'Online & Active', 'Connected to NAAV Delivery Network.');
         updateDiagnostics({
             apiStatus: res.status + ' ' + res.statusText,
@@ -462,7 +476,6 @@ function gpsError(e) {
         errorMsg: 'GPS Alert ' + e.code + ': ' + (e.message || m[e.code])
     });
 
-    // Send heartbeat immediately so backend receives updated gpsStatus
     sendHeartbeat();
 }
 
@@ -479,7 +492,6 @@ function startLocation() {
         return;
     }
 
-    // Prevent duplicate watchers
     if (watchId !== null) return;
 
     setStatus(true, 'Online & Active', 'Sharing live location with NAAV Network.');
