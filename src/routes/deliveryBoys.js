@@ -96,12 +96,20 @@ router.put('/:id', async (req, res) => {
 // Set / Reset Rider Password (Admin Action)
 router.post('/set-password', async (req, res) => {
     const { riderId, password } = req.body || {};
-    if (!riderId || !password) {
-        return res.status(400).json({ success: false, error: 'riderId and password are required.' });
+    if (!riderId) {
+        return res.status(400).json({ success: false, error: 'riderId is required.' });
+    }
+
+    const cleanPass = String(password || '').trim();
+    if (!cleanPass) {
+        return res.status(400).json({
+            success: false,
+            error: 'Password cannot be empty or only spaces.'
+        });
     }
 
     try {
-        const hash = bcrypt.hashSync(String(password), 10);
+        const hash = bcrypt.hashSync(cleanPass, 10);
         await pool.query(
             `UPDATE "deliveryBoys" SET "passwordHash" = $1 WHERE id = $2 OR name = $2`,
             [hash, String(riderId).trim()]

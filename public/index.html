@@ -5693,7 +5693,9 @@
 
         function setRiderPasswordPrompt(riderId, riderName) {
             requestSecurityCheck(() => {
-                const newPass = prompt(`Set / Reset Login Password for Rider "${riderName}" (ID: ${riderId}):`);
+                const rawPass = prompt(`Set / Reset Login Password for Rider "${riderName}" (ID: ${riderId}):`);
+                if (rawPass === null) return;
+                const newPass = String(rawPass || '').trim();
                 if (!newPass) return;
                 if (newPass.length < 4) {
                     alert('Password should be at least 4 characters long.');
