@@ -5641,7 +5641,12 @@
             fetch('/api/delivery-boys?t=' + Date.now(), {
                 cache: 'no-store'
             })
-                .then(r => r.json())
+                .then(async r => {
+                    const contentType = r.headers.get('content-type') || '';
+                    if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                    if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                    return r.json();
+                })
                 .then(data => {
                     if (Array.isArray(data)) {
                         db.deliveryBoys = data;
@@ -5710,7 +5715,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ riderId, password: newPass })
                 })
-                .then(r => r.json())
+                .then(async r => {
+                    const contentType = r.headers.get('content-type') || '';
+                    if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                    if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                    return r.json();
+                })
                 .then(res => {
                     if (res.success) {
                         alert(`Password set successfully for rider "${riderName}".`);
@@ -5730,7 +5740,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ riderId, status: newStatus })
                 })
-                .then(r => r.json())
+                .then(async r => {
+                    const contentType = r.headers.get('content-type') || '';
+                    if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                    if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                    return r.json();
+                })
                 .then(res => {
                     if (res.success) {
                         loadDeliveryBoys();
@@ -5791,7 +5806,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, mobile, status })
             })
-            .then(r => r.json())
+            .then(async r => {
+                const contentType = r.headers.get('content-type') || '';
+                if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                return r.json();
+            })
             .then(res => {
                 if (res.success) {
                     logAudit('Update', `Delivery Boy Updated: ${name} (ID: ${id}) - Old Name: ${oldObj.name || '-'} -> New Name: ${name}, Old Mobile: ${oldObj.mobile || '-'} -> New Mobile: ${mobile || '-'}, Old Status: ${oldObj.status || 'Active'} -> New Status: ${status}`);
@@ -5823,13 +5843,23 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: riderId, name, mobile, status: 'Active' })
                 })
-                .then(r => r.json())
+                .then(async r => {
+                    const contentType = r.headers.get('content-type') || '';
+                    if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                    if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                    return r.json();
+                })
                 .then(() => {
                     if (initialPass && initialPass.length >= 4) {
                         return fetch('/api/delivery-boys/set-password', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ riderId, password: initialPass })
+                        }).then(async r => {
+                            const contentType = r.headers.get('content-type') || '';
+                            if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                            if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                            return r.json();
                         });
                     }
                 })
@@ -5848,6 +5878,12 @@
             requestSecurityCheck(() => { 
                 const d = (db.deliveryBoys || []).find(x => x.id === id);
                 fetch('/api/delivery-boys/' + id, { method: 'DELETE' })
+                    .then(async r => {
+                        const contentType = r.headers.get('content-type') || '';
+                        if (!r.ok) throw new Error('Server request failed (Status: ' + r.status + ')');
+                        if (!contentType.includes('application/json')) throw new Error('Server returned non-JSON response (Status: ' + r.status + ')');
+                        return r.json();
+                    })
                     .then(() => {
                         logAudit('Delete', `Delivery Boy Deleted: ${d ? d.name : id}`);
                         loadDeliveryBoys();
@@ -8906,7 +8942,8 @@
         async function fetchRiderLocations(manual = false) {
             try {
                 const res = await fetch('/api/rider-locations');
-                if (!res.ok) return;
+                const contentType = res.headers.get('content-type') || '';
+                if (!res.ok || !contentType.includes('application/json')) return;
                 const locations = await res.json();
                 renderRiderLocationsMap(locations);
             } catch (e) {
