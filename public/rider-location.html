@@ -94,6 +94,8 @@ let heartbeatTimer = null;
 let lastSentLocationTime = 0;
 let lastPositionObj = null;
 let currentGpsStatus = 'active';
+let wakeLock = null;
+let isRecovering = false;
 
 function getSavedToken() {
     return localStorage.getItem('naav_rider_token') || sessionStorage.getItem('naav_rider_token') || '';
@@ -172,6 +174,57 @@ function updateDiagnostics(fields = {}) {
     if (fields.apiResponse !== undefined && $('diagApiResponse')) $('diagApiResponse').textContent = fields.apiResponse;
 }
 
+// --- SCREEN WAKE LOCK MANAGER ---
+async function requestWakeLock() {
+    if ('wakeLock' in navigator && currentRiderToken && document.visibilityState === 'visible') {
+        try {
+            if (wakeLock === null) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => {
+                    wakeLock = null;
+                });
+            }
+        } catch (err) {}
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        try { wakeLock.release(); } catch(e) {}
+        wakeLock = null;
+    }
+}
+
+// --- LAST KNOWN LOCATION PERSISTENCE ---
+function saveLastKnownPosition(coords, timestampIso) {
+    try {
+        const data = {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            accuracy: coords.accuracy,
+            timestamp: timestampIso || new Date().toISOString()
+        };
+        localStorage.setItem('naav_rider_last_pos', JSON.stringify(data));
+    } catch(e) {}
+}
+
+function loadLastKnownPosition() {
+    try {
+        const raw = localStorage.getItem('naav_rider_last_pos');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.latitude && parsed.longitude) {
+                lastPositionObj = parsed;
+                const n = new Date(parsed.timestamp);
+                if ($('lat')) $('lat').textContent = parsed.latitude.toFixed(6);
+                if ($('lng')) $('lng').textContent = parsed.longitude.toFixed(6);
+                if ($('acc')) $('acc').textContent = Math.round(parsed.accuracy) + ' m (Last Known)';
+                if ($('updated')) $('updated').textContent = 'Last known (' + n.toLocaleTimeString() + ')';
+            }
+        }
+    } catch(e) {}
+}
+
 async function checkPermissionStatus() {
     if (navigator.permissions && navigator.permissions.query) {
         try {
@@ -246,6 +299,8 @@ async function checkExistingSession() {
         showLoginUI();
         return;
     }
+
+    loadLastKnownPosition();
 
     try {
         const res = await fetch(SESSION_API, {
@@ -331,7 +386,7 @@ function setStatus(on, title, sub) {
     $('statusSub').textContent = sub;
 }
 
-// 4. LIGHTWEIGHT HEARTBEAT ENGINE (Every 20 seconds)
+// 4. LIGHTWEIGHT HEARTBEAT ENGINE (Single Timer Guarded, Every 20 seconds)
 async function sendHeartbeat() {
     if (!currentRiderToken) return;
 
@@ -363,13 +418,13 @@ async function sendHeartbeat() {
             setStatus(true, 'Online & Active (Acquiring GPS)', 'Location tracking active.');
         }
     } catch (e) {
-        setStatus(true, 'Online & Active', 'Reconnecting to network…');
+        setStatus(true, 'Online & Active (Reconnecting)', 'Reconnecting to network…');
     }
 }
 
 function startHeartbeatTimer() {
     if (!currentRiderToken) return;
-    if (heartbeatTimer !== null) return;
+    if (heartbeatTimer !== null) return; // Single timer guard
     sendHeartbeat();
     heartbeatTimer = setInterval(sendHeartbeat, 20000);
 }
@@ -394,6 +449,7 @@ function getDistanceMeters(lat1, lon1, lat2, lon2) {
 
 // 5. CONTINUOUS LOCATION POSITIONING (Throttled 10-15s unless moved >10m)
 async function renderPosition(p) {
+    if (!p || !p.coords) return;
     const c = p.coords, n = new Date();
     currentGpsStatus = 'active';
 
@@ -402,11 +458,12 @@ async function renderPosition(p) {
     if ($('acc')) $('acc').textContent = Math.round(c.accuracy) + ' m';
     if ($('updated')) $('updated').textContent = n.toLocaleTimeString();
 
+    saveLastKnownPosition(c, n.toISOString());
     updateDiagnostics({ errorMsg: 'GPS position acquired' });
 
     const now = Date.now();
     let movedFar = false;
-    if (lastPositionObj) {
+    if (lastPositionObj && lastPositionObj.latitude && lastPositionObj.longitude) {
         const dist = getDistanceMeters(lastPositionObj.latitude, lastPositionObj.longitude, c.latitude, c.longitude);
         if (dist > 10) movedFar = true;
     }
@@ -417,7 +474,7 @@ async function renderPosition(p) {
     }
 
     lastSentLocationTime = now;
-    lastPositionObj = { latitude: c.latitude, longitude: c.longitude };
+    lastPositionObj = { latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy };
 
     const payload = {
         latitude: c.latitude,
@@ -473,7 +530,7 @@ function gpsError(e) {
     }
 
     updateDiagnostics({
-        errorMsg: 'GPS Alert ' + e.code + ': ' + (e.message || m[e.code])
+        errorMsg: 'GPS Alert ' + (e.code || 'ERR') + ': ' + ((e && e.message) || m[e.code] || 'GPS Error')
     });
 
     sendHeartbeat();
@@ -492,58 +549,93 @@ function startLocation() {
         return;
     }
 
-    if (watchId !== null) return;
+    if (watchId !== null) return; // Single watcher guard
 
+    requestWakeLock();
     setStatus(true, 'Online & Active', 'Sharing live location with NAAV Network.');
     updateDiagnostics({ errorMsg: 'Acquiring GPS fix…' });
 
     const highAccOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
 
-    watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            renderPosition(pos);
-        },
-        (err) => {
-            updateDiagnostics({ errorMsg: 'HighAcc failed. Trying standard accuracy...' });
-            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-            watchId = navigator.geolocation.watchPosition(
-                renderPosition,
-                gpsError,
-                { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 }
-            );
-        },
-        highAccOptions
-    );
+    try {
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                renderPosition(pos);
+            },
+            (err) => {
+                updateDiagnostics({ errorMsg: 'HighAcc failed. Trying standard accuracy...' });
+                if (watchId !== null) {
+                    try { navigator.geolocation.clearWatch(watchId); } catch(e2) {}
+                    watchId = null;
+                }
+                try {
+                    watchId = navigator.geolocation.watchPosition(
+                        renderPosition,
+                        gpsError,
+                        { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 }
+                    );
+                } catch(e3) {
+                    gpsError({ code: 2, message: 'GPS watch failed' });
+                }
+            },
+            highAccOptions
+        );
+    } catch(e) {
+        gpsError({ code: 2, message: e.message });
+    }
 }
 
 function stopLocation() {
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-    watchId = null;
+    if (watchId !== null) {
+        try { navigator.geolocation.clearWatch(watchId); } catch(e) {}
+        watchId = null;
+    }
+    releaseWakeLock();
     setStatus(false, 'Offline', 'Location sharing stopped.');
     updateDiagnostics({ errorMsg: 'Sharing stopped by user' });
 }
 
-// Background / Visibility / Tab Focus / Online Listeners
+// --- INSTANT FOREGROUND RECOVERY MANAGER ---
+async function handleForegroundRecovery() {
+    if (!currentRiderToken || isRecovering) return;
+    isRecovering = true;
+
+    try {
+        // Reacquire Screen Wake Lock
+        await requestWakeLock();
+
+        // Ensure single active GPS watcher
+        if (watchId === null) {
+            startLocation();
+        }
+
+        // Ensure single heartbeat timer & send immediate ping
+        if (heartbeatTimer === null) {
+            startHeartbeatTimer();
+        } else {
+            sendHeartbeat();
+        }
+
+        // Render last known position instantly if available
+        if (lastPositionObj) {
+            renderPosition({ coords: lastPositionObj });
+        }
+    } finally {
+        isRecovering = false;
+    }
+}
+
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && currentRiderToken) {
-        if (watchId === null) startLocation();
-        startHeartbeatTimer();
+    if (document.visibilityState === 'visible') {
+        handleForegroundRecovery();
+    } else {
+        releaseWakeLock();
     }
 });
 
-window.addEventListener('focus', () => {
-    if (currentRiderToken) {
-        if (watchId === null) startLocation();
-        startHeartbeatTimer();
-    }
-});
-
-window.addEventListener('online', () => {
-    if (currentRiderToken) {
-        if (watchId === null) startLocation();
-        startHeartbeatTimer();
-    }
-});
+window.addEventListener('focus', handleForegroundRecovery);
+window.addEventListener('online', handleForegroundRecovery);
+window.addEventListener('pageshow', handleForegroundRecovery);
 
 $('loginBtn').onclick = performRiderLogin;
 $('logoutBtn').onclick = performRiderLogout;
