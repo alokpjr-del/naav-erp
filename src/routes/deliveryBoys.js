@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 // Get All Delivery Boys
 router.get('/', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         const result = await pool.query(
             `SELECT id, name, mobile, status, CASE WHEN "passwordHash" IS NOT NULL AND "passwordHash" != '' THEN true ELSE false END as "hasPassword" FROM "deliveryBoys" ORDER BY name`
         );
