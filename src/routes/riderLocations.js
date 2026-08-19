@@ -7,7 +7,7 @@ const { pool } = require('../postgres');
 // Active authenticated rider sessions: token -> { riderId, riderName, mobile, loginTime }
 const riderSessions = new Map();
 
-// Latest location store: riderId -> { riderId, riderName, latitude, longitude, accuracy, timestamp, updatedAt }
+// Latest location & heartbeat store: riderId -> { riderId, riderName, latitude, longitude, accuracy, lastLocationAt, lastHeartbeatAt, gpsStatus, isLoggedOut, updatedAt }
 const riderLocationsStore = new Map();
 
 // Helper to extract session token from request headers
@@ -68,6 +68,20 @@ router.post('/rider-login', async (req, res) => {
 
         riderSessions.set(token, sessionData);
 
+        // Mark rider active in location store on login
+        const existing = riderLocationsStore.get(rider.id) || {};
+        const nowMs = Date.now();
+        const nowIso = new Date(nowMs).toISOString();
+
+        riderLocationsStore.set(rider.id, {
+            ...existing,
+            riderId: rider.id,
+            riderName: rider.name,
+            lastHeartbeatAt: nowMs,
+            isLoggedOut: false,
+            updatedAt: nowIso
+        });
+
         res.json({
             success: true,
             token,
@@ -91,6 +105,19 @@ router.get('/rider-session', (req, res) => {
         }
 
         const session = riderSessions.get(token);
+
+        // Touch heartbeat on session verification
+        const existing = riderLocationsStore.get(session.riderId) || {};
+        const nowMs = Date.now();
+        riderLocationsStore.set(session.riderId, {
+            ...existing,
+            riderId: session.riderId,
+            riderName: session.riderName,
+            lastHeartbeatAt: nowMs,
+            isLoggedOut: false,
+            updatedAt: new Date(nowMs).toISOString()
+        });
+
         res.json({
             success: true,
             rider: {
@@ -109,6 +136,15 @@ router.post('/rider-logout', (req, res) => {
     try {
         const token = getRiderToken(req);
         if (token && riderSessions.has(token)) {
+            const session = riderSessions.get(token);
+            if (session && session.riderId) {
+                const existing = riderLocationsStore.get(session.riderId) || {};
+                riderLocationsStore.set(session.riderId, {
+                    ...existing,
+                    isLoggedOut: true,
+                    updatedAt: new Date().toISOString()
+                });
+            }
             riderSessions.delete(token);
         }
         res.json({ success: true, message: 'Logged out successfully.' });
@@ -126,21 +162,28 @@ router.post('/rider-location', (req, res) => {
         }
 
         const session = riderSessions.get(token);
-        const { latitude, longitude, accuracy, timestamp } = req.body || {};
+        const { latitude, longitude, accuracy, timestamp, gpsStatus } = req.body || {};
 
         if (latitude === undefined || longitude === undefined) {
             return res.status(400).json({ success: false, error: 'latitude and longitude are required.' });
         }
 
-        const nowIso = new Date().toISOString();
-        
-        // STRICT SECURITY: Use session riderId & riderName ONLY (cannot spoof another rider!)
+        const nowMs = Date.now();
+        const nowIso = new Date(nowMs).toISOString();
+        const existing = riderLocationsStore.get(session.riderId) || {};
+
+        // STRICT SECURITY: Use session riderId & riderName ONLY
         const updatedRecord = {
+            ...existing,
             riderId: session.riderId,
             riderName: session.riderName,
             latitude: Number(latitude),
             longitude: Number(longitude),
             accuracy: Number(accuracy || 0),
+            lastLocationAt: nowMs,
+            lastHeartbeatAt: nowMs,
+            gpsStatus: gpsStatus || 'active',
+            isLoggedOut: false,
             timestamp: timestamp || nowIso,
             updatedAt: nowIso
         };
@@ -153,24 +196,91 @@ router.post('/rider-location', (req, res) => {
     }
 });
 
+// POST /api/rider-heartbeat - Lightweight Heartbeat Ping (STRICT SESSION AUTHENTICATED)
+router.post('/rider-heartbeat', (req, res) => {
+    try {
+        const token = getRiderToken(req);
+        if (!token || !riderSessions.has(token)) {
+            return res.status(401).json({ success: false, error: 'Unauthorized rider session. Please login first.' });
+        }
+
+        const session = riderSessions.get(token);
+        const { gpsStatus } = req.body || {};
+        const nowMs = Date.now();
+        const nowIso = new Date(nowMs).toISOString();
+
+        const existing = riderLocationsStore.get(session.riderId) || {};
+        const updatedRecord = {
+            ...existing,
+            riderId: session.riderId,
+            riderName: session.riderName,
+            lastHeartbeatAt: nowMs,
+            gpsStatus: gpsStatus || existing.gpsStatus || 'active',
+            isLoggedOut: false,
+            updatedAt: nowIso
+        };
+
+        riderLocationsStore.set(session.riderId, updatedRecord);
+
+        res.json({ success: true, message: 'Heartbeat received.', lastHeartbeatAt: nowIso });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // GET /api/rider-locations - Get latest locations for Accounts Live Map
 router.get('/rider-locations', (req, res) => {
     try {
         const locations = [];
         const now = Date.now();
-        const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
+
+        // Status Threshold Rules:
+        // < 2 minutes (120,000 ms): ONLINE
+        // 2 - 5 minutes (300,000 ms): STALE / CONNECTION WEAK
+        // > 5 minutes: OFFLINE
+        const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+        const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
         for (const record of riderLocationsStore.values()) {
-            const lastTime = new Date(record.timestamp || record.updatedAt).getTime();
-            const diffMs = Math.max(0, now - lastTime);
-            const isOnline = diffMs <= ONLINE_THRESHOLD_MS;
+            const lastLocationMs = record.lastLocationAt || (record.timestamp ? new Date(record.timestamp).getTime() : (record.updatedAt ? new Date(record.updatedAt).getTime() : 0));
+            const lastHeartbeatMs = record.lastHeartbeatAt || (record.updatedAt ? new Date(record.updatedAt).getTime() : 0);
+
+            const lastActiveMs = Math.max(lastLocationMs, lastHeartbeatMs);
+            const diffMs = Math.max(0, now - lastActiveMs);
             const minsAgo = Math.floor(diffMs / (60 * 1000));
+
+            let statusState = 'OFFLINE';
+            let isOnline = false;
+            let lastSeen = 'Offline';
+
+            if (record.isLoggedOut) {
+                statusState = 'OFFLINE';
+                isOnline = false;
+                lastSeen = 'Logged out';
+            } else if (diffMs < ONLINE_THRESHOLD_MS) {
+                statusState = 'ONLINE';
+                isOnline = true;
+                lastSeen = 'Online now';
+            } else if (diffMs <= STALE_THRESHOLD_MS) {
+                statusState = 'STALE';
+                isOnline = true;
+                lastSeen = `${minsAgo} min ago (Weak Connection)`;
+            } else {
+                statusState = 'OFFLINE';
+                isOnline = false;
+                lastSeen = minsAgo < 1 ? 'Just now' : `${minsAgo} min ago`;
+            }
+
+            // Check for explicit GPS unavailable or denied status
+            const gpsUnavailable = record.gpsStatus === 'unavailable' || record.gpsStatus === 'denied';
 
             locations.push({
                 ...record,
-                status: isOnline ? 'Online' : 'Offline',
+                status: isOnline ? (statusState === 'STALE' ? 'Weak Connection' : 'Online') : 'Offline',
+                statusState,
                 isOnline,
-                lastSeen: isOnline ? 'Online now' : (minsAgo < 1 ? 'Just now' : `${minsAgo} min ago`)
+                gpsUnavailable,
+                lastSeen: (isOnline && gpsUnavailable) ? (record.gpsStatus === 'denied' ? 'GPS permission denied' : 'GPS unavailable') : lastSeen
             });
         }
 

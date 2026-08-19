@@ -8938,18 +8938,26 @@
                     listEl.innerHTML = `<div class="p-4 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">No active rider locations recorded yet.<br><a href="/rider-location.html" target="_blank" class="text-blue-600 font-bold hover:underline mt-1 inline-block">Open Rider GPS Mobile Page</a></div>`;
                 } else {
                     listEl.innerHTML = locations.map(r => {
-                        const statusBadge = r.isOnline 
-                            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">🟢 Online</span>`
-                            : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">⚪ Offline (${r.lastSeen})</span>`;
+                        let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">⚪ Offline (${r.lastSeen})</span>`;
+                        if (r.gpsUnavailable && r.isOnline) {
+                            statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">⚠️ ${r.lastSeen}</span>`;
+                        } else if (r.statusState === 'ONLINE') {
+                            statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">🟢 Online</span>`;
+                        } else if (r.statusState === 'STALE') {
+                            statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">🟡 Connection Weak</span>`;
+                        }
+
+                        const latDisplay = (r.latitude !== undefined && r.latitude !== null) ? Number(r.latitude).toFixed(4) : '-';
+                        const lngDisplay = (r.longitude !== undefined && r.longitude !== null) ? Number(r.longitude).toFixed(4) : '-';
 
                         return `
-                            <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-1 hover:border-blue-300 transition cursor-pointer" onclick="focusRiderOnMap(${r.latitude}, ${r.longitude}, '${r.riderId}')">
+                            <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-1 hover:border-blue-300 transition cursor-pointer" onclick="focusRiderOnMap(${r.latitude || 0}, ${r.longitude || 0}, '${r.riderId}')">
                                 <div class="flex items-center justify-between">
                                     <span class="font-bold text-slate-800 text-xs">🚴 ${r.riderName}</span>
                                     ${statusBadge}
                                 </div>
                                 <div class="text-[11px] font-mono text-slate-600 flex items-center justify-between">
-                                    <span>📍 Lat: ${Number(r.latitude).toFixed(4)}, Lng: ${Number(r.longitude).toFixed(4)}</span>
+                                    <span>📍 Lat: ${latDisplay}, Lng: ${lngDisplay}</span>
                                     <span class="text-[10px] text-slate-400 font-sans">±${Math.round(r.accuracy || 0)}m</span>
                                 </div>
                                 <div class="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
@@ -8966,31 +8974,42 @@
                 const bounds = [];
 
                 locations.forEach(r => {
-                    const latLng = [r.latitude, r.longitude];
-                    bounds.push(latLng);
+                    if (r.latitude && r.longitude) {
+                        const latLng = [r.latitude, r.longitude];
+                        bounds.push(latLng);
 
-                    const popupContent = `
-                        <div class="p-1 space-y-1 font-sans text-xs">
-                            <div class="font-bold text-slate-900 flex items-center justify-between gap-2">
-                                <span>🚴 ${r.riderName}</span>
-                                <span class="text-[10px] ${r.isOnline ? 'text-emerald-600 font-bold' : 'text-slate-500'}">${r.isOnline ? '🟢 Online' : '⚪ Offline'}</span>
-                            </div>
-                            <div class="font-mono text-[11px] text-slate-600">
-                                <div>Latitude: ${r.latitude}</div>
-                                <div>Longitude: ${r.longitude}</div>
-                                <div>Accuracy: ±${Math.round(r.accuracy || 0)}m</div>
-                            </div>
-                            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
-                                Updated: ${r.lastSeen} (${new Date(r.timestamp).toLocaleTimeString()})
-                            </div>
-                        </div>
-                    `;
+                        let popupBadge = `<span class="text-[10px] text-slate-500">⚪ Offline</span>`;
+                        if (r.gpsUnavailable && r.isOnline) {
+                            popupBadge = `<span class="text-[10px] text-amber-600 font-bold">⚠️ ${r.lastSeen}</span>`;
+                        } else if (r.statusState === 'ONLINE') {
+                            popupBadge = `<span class="text-[10px] text-emerald-600 font-bold">🟢 Online</span>`;
+                        } else if (r.statusState === 'STALE') {
+                            popupBadge = `<span class="text-[10px] text-yellow-600 font-bold">🟡 Connection Weak</span>`;
+                        }
 
-                    if (leafletRiderMarkers[r.riderId]) {
-                        leafletRiderMarkers[r.riderId].setLatLng(latLng).setPopupContent(popupContent);
-                    } else {
-                        const marker = L.marker(latLng).addTo(leafletRiderMap).bindPopup(popupContent);
-                        leafletRiderMarkers[r.riderId] = marker;
+                        const popupContent = `
+                            <div class="p-1 space-y-1 font-sans text-xs">
+                                <div class="font-bold text-slate-900 flex items-center justify-between gap-2">
+                                    <span>🚴 ${r.riderName}</span>
+                                    ${popupBadge}
+                                </div>
+                                <div class="font-mono text-[11px] text-slate-600">
+                                    <div>Latitude: ${r.latitude}</div>
+                                    <div>Longitude: ${r.longitude}</div>
+                                    <div>Accuracy: ±${Math.round(r.accuracy || 0)}m</div>
+                                </div>
+                                <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                                    Updated: ${r.lastSeen}
+                                </div>
+                            </div>
+                        `;
+
+                        if (leafletRiderMarkers[r.riderId]) {
+                            leafletRiderMarkers[r.riderId].setLatLng(latLng).setPopupContent(popupContent);
+                        } else {
+                            const marker = L.marker(latLng).addTo(leafletRiderMap).bindPopup(popupContent);
+                            leafletRiderMarkers[r.riderId] = marker;
+                        }
                     }
                 });
 

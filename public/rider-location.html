@@ -41,10 +41,10 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
 <div id="loginSection">
     <label>Rider ID / Mobile Number</label>
     <input id="loginRiderId" placeholder="Enter Rider ID or Registered Mobile">
-    
+
     <label>Password</label>
     <input type="password" id="loginPassword" placeholder="Enter Rider Password">
-    
+
     <button id="loginBtn" class="primary">🔐 Login</button>
 </div>
 
@@ -59,10 +59,10 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
         <div><span id="dot" class="dot on"></span><strong id="statusText">Online & Active</strong></div>
         <div id="statusSub" class="muted">Connected to NAAV Delivery Network.</div>
     </div>
-    
+
     <button id="logoutBtn" class="outline" style="margin-top:16px">🚪 Logout</button>
-    
-    <div id="locationBox" class="location">
+
+    <div id="locationBox" class="location show">
         <div class="row"><span>Latitude</span><span id="lat" class="value">-</span></div>
         <div class="row"><span>Longitude</span><span id="lng" class="value">-</span></div>
         <div class="row"><span>Accuracy</span><span id="acc" class="value">-</span></div>
@@ -70,7 +70,7 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
     </div>
 </div>
 
-<!-- HIDDEN INTERNAL DIAGNOSTICS PANEL (Internal developer use only) -->
+<!-- HIDDEN INTERNAL DIAGNOSTICS PANEL -->
 <div id="diagBox" class="diag-box">
   <div class="diag-title">🔧 Rider GPS System Diagnostics</div>
   <div class="row"><span>API Base URL:</span><span id="diagApiBase" class="value break-all">-</span></div>
@@ -90,6 +90,10 @@ button{width:100%;border:0;border-radius:13px;padding:13px;font-size:14px;font-w
 <script>
 const $=id=>document.getElementById(id);
 let watchId = null;
+let heartbeatTimer = null;
+let lastSentLocationTime = 0;
+let lastPositionObj = null;
+let currentGpsStatus = 'active';
 
 function getSavedToken() {
     return localStorage.getItem('naav_rider_token') || sessionStorage.getItem('naav_rider_token') || '';
@@ -110,7 +114,7 @@ function clearLocalToken() {
 let currentRiderToken = getSavedToken();
 let currentRiderObj = null;
 
-// Determine API Base URL dynamically (prefer same-origin HTTP/HTTPS, fallback to Production)
+// Determine API Base URL dynamically
 function getApiBaseUrl() {
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
         return window.location.origin;
@@ -120,6 +124,7 @@ function getApiBaseUrl() {
 
 const API_BASE = getApiBaseUrl();
 const LOCATION_API = API_BASE + '/api/rider-location';
+const HEARTBEAT_API = API_BASE + '/api/rider-heartbeat';
 const LOGIN_API = API_BASE + '/api/rider-login';
 const LOGOUT_API = API_BASE + '/api/rider-logout';
 const SESSION_API = API_BASE + '/api/rider-session';
@@ -147,12 +152,12 @@ function checkContentSchemeWarning() {
 function updateDiagnostics(fields = {}) {
     const isSecure = window.isSecureContext === true;
     const hasGps = !!(navigator && navigator.geolocation);
-    
+
     if ($('diagApiBase')) $('diagApiBase').textContent = API_BASE;
     if ($('diagSecure')) $('diagSecure').innerHTML = isSecure ? '<span style="color:#22c55e">YES (HTTPS)</span>' : '<span style="color:#ef4444">NO (Insecure Context / Content URI)</span>';
     if ($('diagGpsApi')) $('diagGpsApi').innerHTML = hasGps ? '<span style="color:#22c55e">AVAILABLE</span>' : '<span style="color:#ef4444">NOT AVAILABLE</span>';
     if ($('diagUrl')) $('diagUrl').textContent = window.location.href;
-    
+
     if ($('diagAuthRider')) {
         if (currentRiderObj) {
             $('diagAuthRider').innerHTML = `<span style="color:#22c55e">LOGGED IN: ${currentRiderObj.name} (${currentRiderObj.id})</span>`;
@@ -172,8 +177,17 @@ async function checkPermissionStatus() {
         try {
             const status = await navigator.permissions.query({ name: 'geolocation' });
             if ($('diagPerm')) $('diagPerm').textContent = (status.state || 'UNKNOWN').toUpperCase();
+            if (status.state === 'denied') {
+                currentGpsStatus = 'denied';
+            }
             status.onchange = () => {
                 if ($('diagPerm')) $('diagPerm').textContent = (status.state || 'UNKNOWN').toUpperCase();
+                if (status.state === 'denied') {
+                    currentGpsStatus = 'denied';
+                } else if (status.state === 'granted') {
+                    currentGpsStatus = 'active';
+                    startLocation();
+                }
             };
         } catch (e) {
             if ($('diagPerm')) $('diagPerm').textContent = 'QUERY FAILED (' + e.message + ')';
@@ -205,7 +219,6 @@ async function performRiderLogin() {
             return;
         }
 
-        // Store Token in Persistent Storage
         currentRiderToken = data.token;
         currentRiderObj = data.rider;
         saveToken(data.token);
@@ -213,8 +226,8 @@ async function performRiderLogin() {
         showAuthenticatedUI();
         updateDiagnostics({ apiStatus: '200 Login OK', apiResponse: JSON.stringify(data) });
 
-        // Automatically trigger location permission & tracking upon login
         startLocation();
+        startHeartbeatTimer();
 
     } catch (e) {
         let errorMsg = 'Unable to connect to NAAV server. Please check your internet connection.';
@@ -226,7 +239,7 @@ async function performRiderLogin() {
     }
 }
 
-// 2. CHECK SESSION ON LOAD (F5 REFRESH / RE-ENTRY PERSISTENCE)
+// 2. CHECK SESSION ON LOAD
 async function checkExistingSession() {
     currentRiderToken = getSavedToken();
     if (!currentRiderToken) {
@@ -243,25 +256,25 @@ async function checkExistingSession() {
             currentRiderObj = data.rider;
             showAuthenticatedUI();
             startLocation();
+            startHeartbeatTimer();
         } else if (res.status === 401) {
-            // Session genuinely revoked by server -> clear token
             clearLocalToken();
             currentRiderToken = '';
             showLoginUI();
         } else {
-            // Temporary server delay or error -> keep local state authenticated
             if (currentRiderToken) {
                 showAuthenticatedUI();
                 startLocation();
+                startHeartbeatTimer();
             } else {
                 showLoginUI();
             }
         }
     } catch (e) {
-        // Network temporary failure -> DO NOT LOG OUT! Keep logged in UI & restart location
         if (currentRiderToken) {
             showAuthenticatedUI();
             startLocation();
+            startHeartbeatTimer();
         } else {
             showLoginUI();
         }
@@ -269,6 +282,8 @@ async function checkExistingSession() {
 }
 
 function showLoginUI() {
+    stopLocation();
+    stopHeartbeatTimer();
     $('loginSection').style.display = 'block';
     $('riderActiveSection').style.display = 'none';
     currentRiderObj = null;
@@ -286,9 +301,10 @@ function showAuthenticatedUI() {
     updateDiagnostics({ errorMsg: 'Authenticated & Active' });
 }
 
-// 3. LOGOUT HANDLER (EXPLICIT LOGOUT IS THE ONLY STOP CONDITION)
+// 3. LOGOUT HANDLER
 async function performRiderLogout() {
     stopLocation();
+    stopHeartbeatTimer();
     if (currentRiderToken) {
         try {
             await fetch(LOGOUT_API, {
@@ -309,9 +325,68 @@ function setStatus(on, title, sub) {
     $('statusSub').textContent = sub;
 }
 
-// 4. CONTINUOUS LOCATION POSITING
+// 4. LIGHTWEIGHT HEARTBEAT ENGINE (Every 20 seconds)
+async function sendHeartbeat() {
+    if (!currentRiderToken) return;
+
+    try {
+        const res = await fetch(HEARTBEAT_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + currentRiderToken
+            },
+            body: JSON.stringify({ gpsStatus: currentGpsStatus })
+        });
+
+        if (res.status === 401) {
+            showError('Rider session expired. Please login again.');
+            performRiderLogout();
+            return;
+        }
+
+        if (currentGpsStatus === 'active') {
+            setStatus(true, 'Online & Active', 'Connected to NAAV Delivery Network.');
+        } else if (currentGpsStatus === 'denied') {
+            setStatus(true, 'Online & Active (GPS Permission Denied)', 'Please enable location permissions in browser settings.');
+        } else {
+            setStatus(true, 'Online & Active (Acquiring GPS)', 'Location tracking active.');
+        }
+    } catch (e) {
+        setStatus(true, 'Online & Active', 'Reconnecting to network…');
+    }
+}
+
+function startHeartbeatTimer() {
+    if (!currentRiderToken) return;
+    if (heartbeatTimer !== null) return;
+    sendHeartbeat();
+    heartbeatTimer = setInterval(sendHeartbeat, 20000);
+}
+
+function stopHeartbeatTimer() {
+    if (heartbeatTimer !== null) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
+}
+
+// Distance helper (Haversine in meters)
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// 5. CONTINUOUS LOCATION POSITIONING (Throttled 10-15s unless moved >10m)
 async function renderPosition(p) {
     const c = p.coords, n = new Date();
+    currentGpsStatus = 'active';
+
     if ($('lat')) $('lat').textContent = c.latitude.toFixed(6);
     if ($('lng')) $('lng').textContent = c.longitude.toFixed(6);
     if ($('acc')) $('acc').textContent = Math.round(c.accuracy) + ' m';
@@ -319,11 +394,26 @@ async function renderPosition(p) {
 
     updateDiagnostics({ errorMsg: 'GPS position acquired' });
 
-    // Payload (Note: backend derives rider identity strictly from server-side session token!)
+    const now = Date.now();
+    let movedFar = false;
+    if (lastPositionObj) {
+        const dist = getDistanceMeters(lastPositionObj.latitude, lastPositionObj.longitude, c.latitude, c.longitude);
+        if (dist > 10) movedFar = true;
+    }
+
+    // Throttle API sends to at most once per 10 seconds unless moved > 10 meters
+    if (now - lastSentLocationTime < 10000 && !movedFar) {
+        return;
+    }
+
+    lastSentLocationTime = now;
+    lastPositionObj = { latitude: c.latitude, longitude: c.longitude };
+
     const payload = {
         latitude: c.latitude,
         longitude: c.longitude,
         accuracy: c.accuracy,
+        gpsStatus: 'active',
         timestamp: n.toISOString()
     };
 
@@ -350,7 +440,6 @@ async function renderPosition(p) {
             apiResponse: JSON.stringify(resData)
         });
     } catch (e) {
-        // Network temporary failure -> DO NOT LOG OUT! DO NOT STOP GPS WATCHER!
         setStatus(true, 'Online & Active', 'Reconnecting to network… (Location tracking active)');
         updateDiagnostics({
             apiStatus: 'NETWORK TEMPORARY OUTAGE',
@@ -361,16 +450,20 @@ async function renderPosition(p) {
 
 function gpsError(e) {
     const m = { 1: 'Location permission denied.', 2: 'GPS position weak/unavailable.', 3: 'GPS request timeout.' };
+    if (e.code === 1) {
+        currentGpsStatus = 'denied';
+        setStatus(true, 'Online & Active (GPS Denied)', 'Location permission denied in browser.');
+    } else {
+        currentGpsStatus = 'unavailable';
+        setStatus(true, 'Online & Active (Acquiring GPS)', 'Acquiring fresh GPS fix…');
+    }
+
     updateDiagnostics({
         errorMsg: 'GPS Alert ' + e.code + ': ' + (e.message || m[e.code])
     });
-    
-    // DO NOT LOG OUT THE RIDER ON TEMPORARY GPS TIMEOUT OR WEAK SIGNAL!
-    if (e.code === 1) {
-        setStatus(false, 'Offline', 'Location permission denied in browser.');
-    } else {
-        setStatus(true, 'Online & Active', 'Acquiring fresh GPS fix…');
-    }
+
+    // Send heartbeat immediately so backend receives updated gpsStatus
+    sendHeartbeat();
 }
 
 function startLocation() {
@@ -380,7 +473,10 @@ function startLocation() {
         return;
     }
     if (!navigator.geolocation) {
-        return setStatus(false, 'Offline', 'Browser does not support GPS.');
+        currentGpsStatus = 'unavailable';
+        setStatus(true, 'Online & Active (GPS Unsupported)', 'Browser does not support GPS.');
+        sendHeartbeat();
+        return;
     }
 
     // Prevent duplicate watchers
@@ -396,7 +492,6 @@ function startLocation() {
             renderPosition(pos);
         },
         (err) => {
-            // Fallback to standard accuracy on high-accuracy timeout
             updateDiagnostics({ errorMsg: 'HighAcc failed. Trying standard accuracy...' });
             if (watchId !== null) navigator.geolocation.clearWatch(watchId);
             watchId = navigator.geolocation.watchPosition(
@@ -416,15 +511,26 @@ function stopLocation() {
     updateDiagnostics({ errorMsg: 'Sharing stopped by user' });
 }
 
-// Background / Visibility / Tab Focus Listeners
+// Background / Visibility / Tab Focus / Online Listeners
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && currentRiderToken) {
         if (watchId === null) startLocation();
+        startHeartbeatTimer();
     }
 });
 
 window.addEventListener('focus', () => {
-    if (currentRiderToken && watchId === null) startLocation();
+    if (currentRiderToken) {
+        if (watchId === null) startLocation();
+        startHeartbeatTimer();
+    }
+});
+
+window.addEventListener('online', () => {
+    if (currentRiderToken) {
+        if (watchId === null) startLocation();
+        startHeartbeatTimer();
+    }
 });
 
 $('loginBtn').onclick = performRiderLogin;
