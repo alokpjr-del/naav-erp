@@ -616,9 +616,17 @@ async function handleForegroundRecovery() {
             sendHeartbeat();
         }
 
-        // Render last known position instantly if available
-        if (lastPositionObj) {
-            renderPosition({ coords: lastPositionObj });
+        // Force an immediate fresh hardware GPS fix request
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    renderPosition(pos);
+                },
+                (err) => {
+                    updateDiagnostics({ errorMsg: 'Fresh GPS fix on recovery: ' + (err.message || 'acquiring') });
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         }
     } finally {
         isRecovering = false;
