@@ -46,6 +46,10 @@ app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/backup', require('./src/routes/backup'));
 app.use('/api', require('./src/routes/riderLocations'));
 
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, status: 'online', timestamp: new Date().toISOString() });
+});
+
 // A typo'd or removed /api/* route used to silently fall through to the
 // SPA catch-all below and get back an HTML page with a 200 status instead
 // of a 404 — which looks like "it worked" to fetch()/JSON.parse() callers
