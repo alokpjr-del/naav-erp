@@ -622,6 +622,84 @@
         </div>
     </div>
 
+    <!-- CREATE RIDER ORDER MODAL -->
+    <div id="createRiderOrderModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                <h3 class="text-base font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-motorcycle text-amber-500 mr-2"></i>Create & Assign Rider Order
+                </h3>
+                <button type="button" onclick="closeCreateRiderOrderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitCreateRiderOrder(event)" class="space-y-4 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Customer Name *</label>
+                        <input type="text" id="riderOrdCustName" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="e.g. Ramesh Kumar">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Customer Mobile *</label>
+                        <input type="tel" id="riderOrdCustMobile" maxlength="10" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="10-digit Mobile">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">From Location *</label>
+                        <input type="text" id="riderOrdFromLoc" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Pickup Address / Hotel">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">To Location *</label>
+                        <input type="text" id="riderOrdToLoc" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Delivery Address / Landmark">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Food Amount (₹) *</label>
+                        <input type="number" id="riderOrdFoodAmount" step="0.01" min="0" oninput="recalcRiderOrderTotal()" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Delivery Charge (₹) *</label>
+                        <input type="number" id="riderOrdDeliveryCharge" step="0.01" min="0" oninput="recalcRiderOrderTotal()" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Total Amount (₹) <span class="text-blue-600 font-normal">(AUTO CALCULATED)</span></label>
+                    <input type="text" id="riderOrdTotalAmount" readonly class="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-800 cursor-not-allowed" value="₹0.00">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Total = Food Amount + Delivery Charge</p>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase tracking-wider mb-1">Assigned Rider *</label>
+                    <select id="riderOrdRiderSelect" required class="w-full p-2.5 bg-surface border border-slate-200 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                        <option value="">-- Select Active Rider --</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeCreateRiderOrderModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition">Cancel</button>
+                    <button type="submit" id="btnSubmitCreateRiderOrd" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/20 transition">CREATE & SEND TO RIDER</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VIEW RIDER ORDER DETAIL MODAL -->
+    <div id="viewRiderOrderModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-base font-bold text-slate-900">Rider Order Details</h3>
+                <button type="button" onclick="closeViewRiderOrderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="viewRiderOrderContent" class="space-y-2 text-xs divide-y divide-slate-100"></div>
+            <div class="flex justify-end pt-2">
+                <button type="button" onclick="closeViewRiderOrderModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="appContainer" class="flex h-screen w-screen overflow-hidden hidden">
         
@@ -1053,6 +1131,82 @@
                                     </tr>
                                 </thead>
                                 <tbody id="entryTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIDER DELIVERY ORDERS MODULE (PHASE 2B) -->
+                <div id="tab-riderOrders" class="tab-content hidden space-y-6">
+                    <div class="erp-card p-6 space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900 flex items-center">
+                                    <i class="fa-solid fa-motorcycle text-amber-500 mr-2"></i>Rider Delivery Orders
+                                </h3>
+                                <p class="text-xs text-slate-500">Create phone-call delivery orders, assign riders, & track live delivery status</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="loadRiderOrdersTable()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs border border-slate-200 transition flex items-center space-x-1.5 shadow-sm">
+                                    <i class="fa-solid fa-rotate"></i><span>Refresh Orders</span>
+                                </button>
+                                <button type="button" onclick="openCreateRiderOrderModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus"></i><span>+ CREATE RIDER ORDER</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filter Controls -->
+                        <div class="flex items-center justify-between flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                            <div class="flex items-center space-x-3 flex-wrap gap-2">
+                                <div class="flex items-center space-x-1.5">
+                                    <label class="text-xs font-bold text-slate-600">Status:</label>
+                                    <select id="riderOrderFilterStatus" onchange="loadRiderOrdersTable()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                                        <option value="ALL">All Statuses</option>
+                                        <option value="NEW">NEW</option>
+                                        <option value="ACCEPTED">ACCEPTED</option>
+                                        <option value="PICKED_UP">PICKED_UP</option>
+                                        <option value="DELIVERED">DELIVERED</option>
+                                        <option value="CANCELLED">CANCELLED</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
+                                    <label class="text-xs font-bold text-slate-600">Rider:</label>
+                                    <select id="riderOrderFilterRider" onchange="loadRiderOrdersTable()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                                        <option value="">All Riders</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-xs font-semibold text-slate-500">
+                                Total Orders: <span id="riderOrdersCountBadge" class="font-bold text-blue-600">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Orders Data Table -->
+                        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">
+                                        <th class="p-3.5">Order ID</th>
+                                        <th class="p-3.5">Customer</th>
+                                        <th class="p-3.5">Mobile</th>
+                                        <th class="p-3.5">From</th>
+                                        <th class="p-3.5">To</th>
+                                        <th class="p-3.5">Food Amt</th>
+                                        <th class="p-3.5">Delivery Chg</th>
+                                        <th class="p-3.5">Total Amt</th>
+                                        <th class="p-3.5">Assigned Rider</th>
+                                        <th class="p-3.5">Status</th>
+                                        <th class="p-3.5">Payment</th>
+                                        <th class="p-3.5">Created Time</th>
+                                        <th class="p-3.5 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="riderOrdersTableBody" class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td colspan="13" class="p-6 text-center text-slate-400">Loading rider delivery orders...</td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -2937,11 +3091,12 @@
 
         function buildSidebar() {
             const nav = document.getElementById('sidebarNav');
-            let role = currentAdminRecord ? (currentAdminRecord.role || 'Super Admin') : 'Super Admin';
+            let rawRole = currentAdminRecord ? (currentAdminRecord.role || 'Super Admin') : 'Super Admin';
+            let roleNorm = String(rawRole).trim().toUpperCase();
 
             let items = [];
 
-            if (role === 'Super Administrator' || role === 'Administrator' || role === 'Super Admin') {
+            if (roleNorm.includes('ADMIN') || roleNorm === 'SUPER ADMINISTRATOR' || roleNorm === 'ADMINISTRATOR' || roleNorm === 'SUPER ADMIN') {
                 items = [
                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
                     { type: 'divider' },
@@ -2954,6 +3109,7 @@
                     { id: 'riderSettlement', label: 'Riders Settlement', icon: 'fa-wallet' },
                     { id: 'expenseMgmt', label: 'Expenses', icon: 'fa-file-invoice-dollar' },
                     { id: 'deliveryBoys', label: 'Delivery Boys', icon: 'fa-user-tie' },
+                    { id: 'riderOrders', label: 'Rider Orders', icon: 'fa-motorcycle' },
                     { id: 'dayClose', label: 'Day Close', icon: 'fa-calendar-check' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' },
@@ -2967,19 +3123,20 @@
                     { id: 'adminMgmt', label: 'Administrators', icon: 'fa-user-shield' },
                     { id: 'settings', label: 'Settings', icon: 'fa-gear' }
                 ];
-            } else if (role === 'Manager') {
+            } else if (roleNorm === 'MANAGER') {
                 items = [
                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
                     { type: 'divider' },
                     { id: 'dailyEntry', label: 'Orders', icon: 'fa-cart-shopping' },
                     { id: 'vendors', label: 'Restaurants', icon: 'fa-store' },
                     { id: 'deliveryBoys', label: 'Delivery Boys', icon: 'fa-user-tie' },
+                    { id: 'riderOrders', label: 'Rider Orders', icon: 'fa-motorcycle' },
                     { id: 'restaurantSettlement', label: 'Accounts', icon: 'fa-cash-register' },
                     { id: 'riderSettlement', label: 'Riders Settlement', icon: 'fa-wallet' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' }
                 ];
-            } else if (role === 'Accounts') {
+            } else if (roleNorm === 'ACCOUNTS') {
                 items = [
                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
                     { type: 'divider' },
@@ -2989,6 +3146,7 @@
                     { id: 'restaurantSettlement', label: 'Accounts', icon: 'fa-cash-register' },
                     { id: 'riderSettlement', label: 'Riders Settlement', icon: 'fa-wallet' },
                     { id: 'expenseMgmt', label: 'Expenses', icon: 'fa-file-invoice-dollar' },
+                    { id: 'riderOrders', label: 'Rider Orders', icon: 'fa-motorcycle' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' },
                     { id: 'monthlyPNL', label: 'Monthly P&L', icon: 'fa-chart-line' },
@@ -3004,6 +3162,7 @@
                     { id: 'dailyEntry', label: 'Orders View', icon: 'fa-cart-shopping' },
                     { id: 'vendors', label: 'Restaurants View', icon: 'fa-store' },
                     { id: 'deliveryBoys', label: 'Riders View', icon: 'fa-user-tie' },
+                    { id: 'riderOrders', label: 'Rider Orders', icon: 'fa-motorcycle' },
                     { type: 'divider' },
                     { id: 'reports', label: 'Reports', icon: 'fa-file-lines' }
                 ];
@@ -3023,7 +3182,7 @@
                 `;
             }).join('');
 
-            document.getElementById('sidebarUserRole').innerText = role;
+            document.getElementById('sidebarUserRole').innerText = rawRole;
             document.getElementById('topbarUsername').innerText = currentUser;
             
             // Set current date in top header
@@ -3032,17 +3191,18 @@
         }
 
         function switchTab(tabId) {
-            let role = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
+            let rawRole = currentAdminRecord ? currentAdminRecord.role : 'Administrator';
+            let roleNorm = String(rawRole).trim().toUpperCase();
 
-            if ((role === 'Super Administrator' || role === 'Administrator')) {
+            if (roleNorm.includes('ADMIN') || roleNorm === 'SUPER ADMINISTRATOR' || roleNorm === 'ADMINISTRATOR' || roleNorm === 'SUPER ADMIN') {
                 // Full access
-            } else if (role === 'Manager' && !['dashboard', 'dailyEntry', 'restaurantSettlement', 'expenseMgmt', 'riderSettlement', 'reports'].includes(tabId)) {
+            } else if (roleNorm === 'MANAGER' && !['dashboard', 'dailyEntry', 'riderOrders', 'restaurantSettlement', 'expenseMgmt', 'riderSettlement', 'reports'].includes(tabId)) {
                 alert('Access Denied for Manager role.');
                 return;
-            } else if (role === 'Operator' && !['dailyEntry', 'expenseMgmt', 'reports'].includes(tabId)) {
-                alert('Operator role can only access Orders, Expenses and Reports.');
+            } else if (roleNorm === 'OPERATOR' && !['dailyEntry', 'riderOrders', 'expenseMgmt', 'reports'].includes(tabId)) {
+                alert('Operator role can only access Orders, Rider Orders, Expenses and Reports.');
                 return;
-            } else if (role === 'Viewer' && !['dashboard', 'reports'].includes(tabId)) {
+            } else if (roleNorm === 'VIEWER' && !['dashboard', 'reports', 'riderOrders'].includes(tabId)) {
                 alert('Viewer role has read-only access to Dashboard and Reports.');
                 return;
             }
@@ -3073,6 +3233,7 @@
             const titles = {
                 dashboard: 'Business Dashboard',
                 dailyEntry: 'Orders Management',
+                riderOrders: 'Rider Delivery Orders',
                 reconciliation: 'Cash & UPI Reconciliation',
                 pendingPayments: 'Pending Payments Directory',
                 restaurantSettlement: 'Accounts & Settlement',
@@ -3097,6 +3258,7 @@
 
             if (tabId === 'dashboard') loadDashboard();
             if (tabId === 'dailyEntry') initDailyEntryTab();
+            if (tabId === 'riderOrders') loadRiderOrdersTable();
             if (tabId === 'reconciliation') loadReconciliation();
             if (tabId === 'pendingPayments') loadPendingPayments();
             if (tabId === 'restaurantSettlement') initRestaurantSettlementTab();
@@ -9335,6 +9497,246 @@
                 clearInterval(riderLocationPollInterval);
                 riderLocationPollInterval = null;
             }
+        }
+
+        // RIDER ORDERS MODULE (PHASE 2B)
+        let rawRiderOrdersData = [];
+
+        function populateRiderOrderRidersDropdown() {
+            const selectModal = document.getElementById('riderOrdRiderSelect');
+            const selectFilter = document.getElementById('riderOrderFilterRider');
+
+            const riders = db.deliveryBoys || [];
+            let optionsHtml = '<option value="">-- Select Active Rider --</option>';
+            let filterOptionsHtml = '<option value="">All Riders</option>';
+
+            riders.forEach(r => {
+                const name = r.name || r.id;
+                const mobile = r.mobile ? ` (${r.mobile})` : '';
+                optionsHtml += `<option value="${r.id}">${name}${mobile}</option>`;
+                filterOptionsHtml += `<option value="${r.id}">${name}${mobile}</option>`;
+            });
+
+            if (selectModal) selectModal.innerHTML = optionsHtml;
+            if (selectFilter) {
+                const currVal = selectFilter.value;
+                selectFilter.innerHTML = filterOptionsHtml;
+                selectFilter.value = currVal;
+            }
+        }
+
+        function recalcRiderOrderTotal() {
+            const foodInput = document.getElementById('riderOrdFoodAmount');
+            const delInput = document.getElementById('riderOrdDeliveryCharge');
+            const totalInput = document.getElementById('riderOrdTotalAmount');
+
+            const food = parseFloat(foodInput ? foodInput.value : 0) || 0;
+            const del = parseFloat(delInput ? delInput.value : 0) || 0;
+            const total = food + del;
+
+            if (totalInput) {
+                totalInput.value = `₹${total.toFixed(2)}`;
+            }
+        }
+
+        function openCreateRiderOrderModal() {
+            populateRiderOrderRidersDropdown();
+            document.getElementById('riderOrdCustName').value = '';
+            document.getElementById('riderOrdCustMobile').value = '';
+            document.getElementById('riderOrdFromLoc').value = '';
+            document.getElementById('riderOrdToLoc').value = '';
+            document.getElementById('riderOrdFoodAmount').value = '';
+            document.getElementById('riderOrdDeliveryCharge').value = '';
+            document.getElementById('riderOrdTotalAmount').value = '₹0.00';
+            document.getElementById('riderOrdRiderSelect').value = '';
+
+            document.getElementById('createRiderOrderModal').classList.remove('hidden');
+        }
+
+        function closeCreateRiderOrderModal() {
+            document.getElementById('createRiderOrderModal').classList.add('hidden');
+        }
+
+        function submitCreateRiderOrder(e) {
+            e.preventDefault();
+
+            const customerName = document.getElementById('riderOrdCustName').value.trim();
+            const customerMobile = document.getElementById('riderOrdCustMobile').value.trim();
+            const fromLocation = document.getElementById('riderOrdFromLoc').value.trim();
+            const toLocation = document.getElementById('riderOrdToLoc').value.trim();
+            const foodAmount = parseFloat(document.getElementById('riderOrdFoodAmount').value) || 0;
+            const deliveryCharge = parseFloat(document.getElementById('riderOrdDeliveryCharge').value) || 0;
+            const riderId = document.getElementById('riderOrdRiderSelect').value;
+
+            if (!customerName || !customerMobile || customerMobile.length !== 10) {
+                alert('Please enter a valid customer name and 10-digit mobile number.');
+                return;
+            }
+            if (!fromLocation || !toLocation) {
+                alert('Please enter both From and To locations.');
+                return;
+            }
+            if (!riderId) {
+                alert('Please select an active rider.');
+                return;
+            }
+
+            const orderId = 'ORD-' + Date.now().toString().slice(-6);
+            const btn = document.getElementById('btnSubmitCreateRiderOrd');
+            if (btn) { btn.disabled = true; btn.innerText = 'Creating Order...'; }
+
+            fetch('/api/rider-orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId,
+                    riderId,
+                    customerName,
+                    customerMobile,
+                    fromLocation,
+                    toLocation,
+                    foodAmount,
+                    deliveryCharge
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (btn) { btn.disabled = false; btn.innerText = 'CREATE & SEND TO RIDER'; }
+                if (data.success) {
+                    alert('Order created and assigned successfully.');
+                    closeCreateRiderOrderModal();
+                    loadRiderOrdersTable();
+                } else {
+                    alert(data.error || 'Failed to create order.');
+                }
+            })
+            .catch(err => {
+                if (btn) { btn.disabled = false; btn.innerText = 'CREATE & SEND TO RIDER'; }
+                alert('Network error: ' + err.message);
+            });
+        }
+
+        function loadRiderOrdersTable() {
+            populateRiderOrderRidersDropdown();
+            const statusFilter = document.getElementById('riderOrderFilterStatus') ? document.getElementById('riderOrderFilterStatus').value : 'ALL';
+            const riderFilter = document.getElementById('riderOrderFilterRider') ? document.getElementById('riderOrderFilterRider').value : '';
+
+            let url = `/api/rider-orders-admin?status=${encodeURIComponent(statusFilter)}`;
+            if (riderFilter) url += `&riderId=${encodeURIComponent(riderFilter)}`;
+
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">${data.error || 'Failed to load rider orders'}</td></tr>`;
+                    return;
+                }
+
+                rawRiderOrdersData = data.orders || [];
+                document.getElementById('riderOrdersCountBadge').innerText = rawRiderOrdersData.length;
+                renderRiderOrdersTable(rawRiderOrdersData);
+            })
+            .catch(err => {
+                document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">Network error loading rider orders: ${err.message}</td></tr>`;
+            });
+        }
+
+        function renderRiderOrdersTable(orders) {
+            const tbody = document.getElementById('riderOrdersTableBody');
+            if (!tbody) return;
+
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-400">No rider delivery orders found.</td></tr>`;
+                return;
+            }
+
+            const ridersMap = {};
+            (db.deliveryBoys || []).forEach(r => { ridersMap[r.id] = r.name || r.id; });
+
+            tbody.innerHTML = orders.map(o => {
+                const statusBadgeHtml = getRiderOrderStatusBadge(o.status);
+                const paymentHtml = o.status === 'DELIVERED' 
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">${o.paymentMode || 'CASH'}</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Pending</span>`;
+
+                const riderName = ridersMap[o.riderId] || o.riderId || 'Unassigned';
+                const createdTimeStr = o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="p-3.5 font-bold font-mono text-blue-600 cursor-pointer hover:underline" onclick="viewRiderOrderDetail('${o.orderId}')">${o.orderId}</td>
+                        <td class="p-3.5 font-medium text-slate-800">${escapeHtml(o.customerName || '-')}</td>
+                        <td class="p-3.5 font-medium text-blue-600"><a href="tel:${o.customerMobile}" class="hover:underline">📞 ${escapeHtml(o.customerMobile || '-')}</a></td>
+                        <td class="p-3.5 text-slate-600 max-w-[140px] truncate" title="${escapeHtml(o.fromLocation || '-')}">${escapeHtml(o.fromLocation || '-')}</td>
+                        <td class="p-3.5 text-slate-600 max-w-[140px] truncate" title="${escapeHtml(o.toLocation || '-')}">${escapeHtml(o.toLocation || '-')}</td>
+                        <td class="p-3.5 font-semibold text-slate-700">₹${Number(o.foodAmount || 0).toFixed(2)}</td>
+                        <td class="p-3.5 font-semibold text-amber-700">₹${Number(o.deliveryCharge || 0).toFixed(2)}</td>
+                        <td class="p-3.5 font-bold text-slate-900">₹${Number(o.totalAmount || 0).toFixed(2)}</td>
+                        <td class="p-3.5 font-semibold text-slate-700">🚴 ${escapeHtml(riderName)}</td>
+                        <td class="p-3.5">${statusBadgeHtml}</td>
+                        <td class="p-3.5">${paymentHtml}</td>
+                        <td class="p-3.5 text-slate-500 text-[11px]">${createdTimeStr}</td>
+                        <td class="p-3.5 text-right">
+                            <button type="button" onclick="viewRiderOrderDetail('${o.orderId}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] border border-slate-200 transition">View</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getRiderOrderStatusBadge(status) {
+            const st = (status || 'NEW').toUpperCase();
+            switch(st) {
+                case 'NEW':
+                    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">NEW</span>`;
+                case 'ACCEPTED':
+                    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">ACCEPTED</span>`;
+                case 'PICKED_UP':
+                    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">PICKED_UP</span>`;
+                case 'DELIVERED':
+                    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">DELIVERED</span>`;
+                case 'CANCELLED':
+                    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">CANCELLED</span>`;
+                default:
+                    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">${st}</span>`;
+            }
+        }
+
+        function viewRiderOrderDetail(orderId) {
+            const order = rawRiderOrdersData.find(x => x.orderId === orderId);
+            if (!order) return;
+
+            const ridersMap = {};
+            (db.deliveryBoys || []).forEach(r => { ridersMap[r.id] = r.name || r.id; });
+            const riderName = ridersMap[order.riderId] || order.riderId || 'Unassigned';
+
+            const formatDt = iso => iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not yet';
+
+            const html = `
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Order ID:</span><span class="font-mono font-bold text-slate-900">${order.orderId}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Customer Name:</span><span class="font-semibold text-slate-800">${escapeHtml(order.customerName || '-')}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Customer Mobile:</span><a href="tel:${order.customerMobile}" class="font-semibold text-blue-600 hover:underline">📞 ${escapeHtml(order.customerMobile || '-')}</a></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">From Location:</span><span class="font-medium text-slate-800">${escapeHtml(order.fromLocation || '-')}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">To Location:</span><span class="font-medium text-slate-800">${escapeHtml(order.toLocation || '-')}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Food Amount:</span><span class="font-semibold text-slate-800">₹${Number(order.foodAmount || 0).toFixed(2)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Delivery Charge:</span><span class="font-semibold text-slate-800">₹${Number(order.deliveryCharge || 0).toFixed(2)}</span></div>
+                <div class="py-1.5 flex justify-between bg-slate-50 p-2 rounded-xl"><span class="font-bold text-slate-700">Total Amount:</span><span class="font-bold text-blue-700 text-sm">₹${Number(order.totalAmount || 0).toFixed(2)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Assigned Rider:</span><span class="font-semibold text-slate-800">🚴 ${escapeHtml(riderName)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Order Status:</span><span>${getRiderOrderStatusBadge(order.status)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Payment Mode:</span><span class="font-semibold text-slate-800">${order.status === 'DELIVERED' ? (order.paymentMode || 'CASH') : 'Pending'}</span></div>
+                <div class="py-1.5 flex justify-between bg-emerald-50 p-2 rounded-xl"><span class="font-bold text-emerald-800">Rider Earning:</span><span class="font-bold text-emerald-700">₹${Number(order.riderEarning || 0).toFixed(2)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Created Time:</span><span class="text-slate-600">${formatDt(order.createdAt)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Accepted Time:</span><span class="text-slate-600">${formatDt(order.acceptedAt)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Picked Up Time:</span><span class="text-slate-600">${formatDt(order.pickedUpAt)}</span></div>
+                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Delivered Time:</span><span class="text-slate-600">${formatDt(order.deliveredAt)}</span></div>
+            `;
+
+            document.getElementById('viewRiderOrderContent').innerHTML = html;
+            document.getElementById('viewRiderOrderModal').classList.remove('hidden');
+        }
+
+        function closeViewRiderOrderModal() {
+            document.getElementById('viewRiderOrderModal').classList.add('hidden');
         }
     </script>
 </body>

@@ -45,6 +45,7 @@ app.use('/api/audit-log', require('./src/routes/auditLog'));
 app.use('/api/settings', require('./src/routes/settings'));
 app.use('/api/backup', require('./src/routes/backup'));
 app.use('/api', require('./src/routes/riderLocations'));
+app.use('/api', require('./src/routes/riderOrders'));
 
 app.get('/api/health', (req, res) => {
     res.json({ success: true, status: 'online', timestamp: new Date().toISOString() });

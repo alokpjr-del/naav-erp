@@ -216,6 +216,27 @@ async function initTables() {
                 )
             `);
 
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS rider_orders (
+                    order_id VARCHAR(100) PRIMARY KEY,
+                    rider_id VARCHAR(100) NOT NULL,
+                    customer_name TEXT,
+                    customer_mobile TEXT,
+                    from_location TEXT,
+                    to_location TEXT,
+                    food_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    delivery_charge DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    total_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    rider_earning DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    payment_mode VARCHAR(20),
+                    status VARCHAR(30) NOT NULL DEFAULT 'NEW',
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    accepted_at TIMESTAMPTZ,
+                    picked_up_at TIMESTAMPTZ,
+                    delivered_at TIMESTAMPTZ
+                )
+            `);
+
             // Useful Indexes (columns guaranteed to exist by the ALTER statements above)
             await client.query(`CREATE INDEX IF NOT EXISTS idx_entries_orderid ON entries("orderId")`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date)`);
@@ -223,6 +244,8 @@ async function initTables() {
             await client.query(`CREATE INDEX IF NOT EXISTS idx_restaurants_name ON restaurants(name)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_loc_hist_rider_id ON rider_location_history(rider_id)`);
+            await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_orders_rider_id ON rider_orders(rider_id)`);
+            await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_orders_status ON rider_orders(status)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_loc_hist_recorded_at ON rider_location_history(recorded_at)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_loc_hist_rider_date ON rider_location_history(rider_id, recorded_at)`);
 

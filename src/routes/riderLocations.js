@@ -564,3 +564,5 @@ router.get('/rider-locations', (req, res) => {
 });
 
 module.exports = router;
+module.exports.getAuthenticatedRiderSession = getAuthenticatedRiderSession;
+module.exports.generateRiderJwt = generateRiderJwt;
