@@ -1156,6 +1156,35 @@
                             </div>
                         </div>
 
+                        <!-- Rider Delivery Earnings & Accounting Summary Bar -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                            <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+                                <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Delivered Orders</div>
+                                <div id="summaryDeliveredCount" class="text-base font-extrabold text-blue-950 mt-0.5">0</div>
+                                <div class="text-[9px] text-blue-500 font-semibold mt-0.5">Status = DELIVERED</div>
+                            </div>
+                            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                                <div class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Rider Earnings</div>
+                                <div id="summaryRiderEarnings" class="text-base font-extrabold text-emerald-950 mt-0.5">₹0.00</div>
+                                <div class="text-[9px] text-emerald-600 font-semibold mt-0.5">Delivery Fee Only</div>
+                            </div>
+                            <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl">
+                                <div class="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Cash Collection</div>
+                                <div id="summaryCashCollection" class="text-base font-extrabold text-amber-950 mt-0.5">₹0.00</div>
+                                <div class="text-[9px] text-amber-700 font-semibold mt-0.5">Delivered Cash Total</div>
+                            </div>
+                            <div class="p-3 bg-purple-50 border border-purple-200 rounded-2xl">
+                                <div class="text-[10px] font-bold text-purple-700 uppercase tracking-wider">UPI Collection</div>
+                                <div id="summaryUpiCollection" class="text-base font-extrabold text-purple-950 mt-0.5">₹0.00</div>
+                                <div class="text-[9px] text-purple-600 font-semibold mt-0.5">Delivered UPI Total</div>
+                            </div>
+                            <div class="p-3 bg-slate-100 border border-slate-200 rounded-2xl col-span-2 sm:col-span-1">
+                                <div class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Total Order Value</div>
+                                <div id="summaryTotalOrderValue" class="text-base font-extrabold text-slate-900 mt-0.5">₹0.00</div>
+                                <div class="text-[9px] text-slate-500 font-semibold mt-0.5">Food + Delivery Fee</div>
+                            </div>
+                        </div>
+
                         <!-- Filter Controls -->
                         <div class="flex items-center justify-between flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
                             <div class="flex items-center space-x-3 flex-wrap gap-2">
@@ -9625,8 +9654,29 @@
             });
         }
 
+        function fetchRiderOrdersSummary() {
+            const riderFilter = document.getElementById('riderOrderFilterRider') ? document.getElementById('riderOrderFilterRider').value : '';
+            let url = `/api/rider-orders-summary`;
+            if (riderFilter) url += `?riderId=${encodeURIComponent(riderFilter)}`;
+
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (document.getElementById('summaryDeliveredCount')) document.getElementById('summaryDeliveredCount').innerText = data.deliveredOrdersCount || 0;
+                    if (document.getElementById('summaryRiderEarnings')) document.getElementById('summaryRiderEarnings').innerText = `₹${(data.totalRiderEarnings || 0).toFixed(2)}`;
+                    if (document.getElementById('summaryCashCollection')) document.getElementById('summaryCashCollection').innerText = `₹${(data.cashCollection || 0).toFixed(2)}`;
+                    if (document.getElementById('summaryUpiCollection')) document.getElementById('summaryUpiCollection').innerText = `₹${(data.upiCollection || 0).toFixed(2)}`;
+                    if (document.getElementById('summaryTotalOrderValue')) document.getElementById('summaryTotalOrderValue').innerText = `₹${(data.totalAmount || 0).toFixed(2)}`;
+                }
+            })
+            .catch(err => console.error('Error fetching rider orders accounting summary:', err));
+        }
+
         function loadRiderOrdersTable() {
             populateRiderOrderRidersDropdown();
+            fetchRiderOrdersSummary();
+
             const statusFilter = document.getElementById('riderOrderFilterStatus') ? document.getElementById('riderOrderFilterStatus').value : 'ALL';
             const riderFilter = document.getElementById('riderOrderFilterRider') ? document.getElementById('riderOrderFilterRider').value : '';
 

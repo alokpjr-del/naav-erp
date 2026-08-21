@@ -134,6 +134,97 @@ router.get('/rider-orders-admin', async (req, res) => {
     }
 });
 
+// GET /api/rider-orders-summary - Accounting & Earnings Report for Rider Delivery Orders
+router.get('/rider-orders-summary', async (req, res) => {
+    try {
+        const { riderId, date, period, startDate, endDate } = req.query || {};
+
+        let queryText = `SELECT * FROM rider_orders WHERE UPPER(status) = 'DELIVERED'`;
+        const queryParams = [];
+
+        if (riderId && typeof riderId === 'string' && riderId.trim() && riderId.trim() !== 'ALL') {
+            queryParams.push(riderId.trim());
+            queryText += ` AND rider_id = $${queryParams.length}`;
+        }
+
+        if (date && typeof date === 'string' && date.trim()) {
+            queryParams.push(date.trim());
+            queryText += ` AND DATE(delivered_at AT TIME ZONE 'Asia/Kolkata') = $${queryParams.length}`;
+        } else if (period === 'today') {
+            queryText += ` AND DATE(delivered_at AT TIME ZONE 'Asia/Kolkata') = CURRENT_DATE`;
+        } else if (period === 'weekly') {
+            queryText += ` AND delivered_at >= NOW() - INTERVAL '7 days'`;
+        } else if (period === 'monthly') {
+            queryText += ` AND delivered_at >= NOW() - INTERVAL '30 days'`;
+        } else if (startDate && endDate) {
+            queryParams.push(startDate.trim());
+            queryText += ` AND DATE(delivered_at AT TIME ZONE 'Asia/Kolkata') >= $${queryParams.length}`;
+            queryParams.push(endDate.trim());
+            queryText += ` AND DATE(delivered_at AT TIME ZONE 'Asia/Kolkata') <= $${queryParams.length}`;
+        }
+
+        queryText += ` ORDER BY delivered_at DESC`;
+
+        const result = await pool.query(queryText, queryParams);
+        const orders = result.rows.map(formatOrderResponse);
+
+        let totalFoodAmount = 0;
+        let totalDeliveryCharges = 0;
+        let totalAmount = 0;
+        let totalRiderEarnings = 0;
+        let cashCollection = 0;
+        let upiCollection = 0;
+
+        const riderMap = {};
+
+        orders.forEach(o => {
+            totalFoodAmount += o.foodAmount;
+            totalDeliveryCharges += o.deliveryCharge;
+            totalAmount += o.totalAmount;
+            totalRiderEarnings += o.riderEarning;
+
+            if (o.paymentMode === 'CASH') cashCollection += o.totalAmount;
+            if (o.paymentMode === 'UPI') upiCollection += o.totalAmount;
+
+            const rId = o.riderId || 'UNASSIGNED';
+            if (!riderMap[rId]) {
+                riderMap[rId] = {
+                    riderId: rId,
+                    deliveredOrders: 0,
+                    deliveryCharges: 0,
+                    totalRiderEarnings: 0,
+                    cashCollection: 0,
+                    upiCollection: 0,
+                    totalOrderAmount: 0
+                };
+            }
+            riderMap[rId].deliveredOrders += 1;
+            riderMap[rId].deliveryCharges += o.deliveryCharge;
+            riderMap[rId].totalRiderEarnings += o.riderEarning;
+            if (o.paymentMode === 'CASH') riderMap[rId].cashCollection += o.totalAmount;
+            if (o.paymentMode === 'UPI') riderMap[rId].upiCollection += o.totalAmount;
+            riderMap[rId].totalOrderAmount += o.totalAmount;
+        });
+
+        res.json({
+            success: true,
+            count: orders.length,
+            deliveredOrdersCount: orders.length,
+            totalFoodAmount: Number(totalFoodAmount.toFixed(2)),
+            totalDeliveryCharges: Number(totalDeliveryCharges.toFixed(2)),
+            totalAmount: Number(totalAmount.toFixed(2)),
+            totalRiderEarnings: Number(totalRiderEarnings.toFixed(2)),
+            cashCollection: Number(cashCollection.toFixed(2)),
+            upiCollection: Number(upiCollection.toFixed(2)),
+            riderBreakdown: Object.values(riderMap),
+            orders
+        });
+    } catch (err) {
+        console.error('Error fetching rider orders accounting summary:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // GET /api/rider-orders - List assigned orders for authenticated rider
 router.get('/rider-orders', async (req, res) => {
     try {
