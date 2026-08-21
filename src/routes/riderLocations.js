@@ -379,7 +379,92 @@ router.post('/rider-location', async (req, res) => {
 
         riderLocationsStore.set(session.riderId, updatedRecord);
 
+        // ALSO insert historical GPS record into rider_location_history
+        try {
+            await pool.query(
+                `INSERT INTO rider_location_history (rider_id, latitude, longitude, accuracy, recorded_at)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [
+                    session.riderId,
+                    Number(latitude),
+                    Number(longitude),
+                    Number(accuracy || 0),
+                    timestamp ? new Date(timestamp) : new Date()
+                ]
+            );
+        } catch (dbErr) {
+            console.error('Error inserting into rider_location_history:', dbErr);
+        }
+
         res.json({ success: true, data: updatedRecord });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Haversine distance helper function (returns KM)
+function calculateHaversineDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth radius in KM
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+// GET /api/rider-location-history - Get historical GPS points & route analytics
+router.get('/rider-location-history', async (req, res) => {
+    try {
+        const { riderId, date } = req.query || {};
+
+        if (!riderId) {
+            return res.status(400).json({ success: false, error: 'riderId query parameter is required.' });
+        }
+
+        const queryDate = (date && date.trim()) ? date.trim() : new Date().toISOString().split('T')[0];
+
+        const result = await pool.query(
+            `SELECT id, rider_id, latitude, longitude, accuracy, recorded_at
+             FROM rider_location_history
+             WHERE rider_id = $1 AND recorded_at::date = $2::date
+             ORDER BY recorded_at ASC`,
+            [riderId, queryDate]
+        );
+
+        const locations = result.rows.map(row => ({
+            id: row.id,
+            latitude: Number(row.latitude),
+            longitude: Number(row.longitude),
+            accuracy: Number(row.accuracy || 0),
+            recordedAt: row.recorded_at
+        }));
+
+        let totalDistanceKm = 0;
+        for (let i = 1; i < locations.length; i++) {
+            const prev = locations[i - 1];
+            const curr = locations[i];
+            const dist = calculateHaversineDistanceKm(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+            const timeDiffSec = (new Date(curr.recordedAt) - new Date(prev.recordedAt)) / 1000;
+
+            // Outlier filter: Ignore sudden unrealistic GPS teleports (> 5km jump in < 15s or speed > 150 km/h)
+            if (dist > 0.001) {
+                const speedKmH = timeDiffSec > 0 ? (dist / (timeDiffSec / 3600)) : 0;
+                if (speedKmH <= 150 && dist <= 5) {
+                    totalDistanceKm += dist;
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            riderId,
+            date: queryDate,
+            totalDistanceKm: Number(totalDistanceKm.toFixed(2)),
+            pointCount: locations.length,
+            locations
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

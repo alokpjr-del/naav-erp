@@ -1427,15 +1427,30 @@
 
                 <!-- 6. DELIVERY BOYS -->
                 <div id="tab-deliveryBoys" class="tab-content hidden space-y-6">
-                    <!-- LIVE RIDER LOCATION MAP SECTION -->
+                    <!-- LIVE RIDER LOCATION MAP & HISTORY SECTION -->
                     <div class="erp-card p-5 space-y-4">
                         <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
                             <div>
                                 <h3 class="text-sm font-bold text-slate-800 flex items-center">
-                                    <i class="fa-solid fa-location-dot text-rose-600 mr-2"></i>📍 Live Rider Location & GPS Tracking
+                                    <i class="fa-solid fa-location-dot text-rose-600 mr-2"></i>📍 Rider Location & GPS Tracking
                                 </h3>
-                                <p class="text-xs text-slate-500">Real-time GPS tracking for active delivery personnel</p>
+                                <p class="text-xs text-slate-500">Real-time live location & historical route tracking for riders</p>
                             </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-slate-100 p-1 rounded-xl flex items-center space-x-1 border border-slate-200">
+                                    <button type="button" id="gpsModeLiveBtn" onclick="setGpsTrackingMode('live')" class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1">
+                                        <i class="fa-solid fa-signal text-[10px]"></i><span>🔴 Live Map</span>
+                                    </button>
+                                    <button type="button" id="gpsModeHistoryBtn" onclick="setGpsTrackingMode('history')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs border border-slate-200 transition flex items-center space-x-1">
+                                        <i class="fa-solid fa-route text-[10px]"></i><span>📜 GPS Route History</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LIVE CONTROLS -->
+                        <div id="gpsLiveControlsSection" class="flex items-center justify-between flex-wrap gap-2">
+                            <span class="text-xs font-bold text-slate-600">Active Live Tracking Mode</span>
                             <div class="flex items-center space-x-2">
                                 <a href="/rider-location.html" target="_blank" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs border border-indigo-200 transition flex items-center space-x-1 shadow-sm">
                                     <i class="fa-solid fa-mobile-screen-button"></i><span>Rider GPS Portal</span>
@@ -1446,18 +1461,66 @@
                             </div>
                         </div>
 
-                        <!-- Map & Rider Cards Layout -->
+                        <!-- HISTORY CONTROLS -->
+                        <div id="gpsHistoryControlsSection" class="hidden flex items-center justify-between flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                            <div class="flex items-center space-x-2 flex-1 min-w-[240px]">
+                                <label class="text-xs font-bold text-slate-600 shrink-0">Rider:</label>
+                                <select id="historyRiderSelect" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500 flex-1">
+                                    <option value="">-- Select Rider --</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-xs font-bold text-slate-600 shrink-0">Date:</label>
+                                <input type="date" id="historyDateSelect" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                            </div>
+                            <button type="button" onclick="loadRiderGpsHistory()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1">
+                                <i class="fa-solid fa-magnifying-glass"></i><span>Load History</span>
+                            </button>
+                        </div>
+
+                        <!-- Map & Sidebar Layout -->
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <!-- Leaflet Map Container -->
                             <div class="lg:col-span-2 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm min-h-[360px] bg-slate-100">
                                 <div id="liveRiderMap" class="w-full h-full min-h-[360px] z-0"></div>
                             </div>
 
-                            <!-- Rider Status & List Panel -->
-                            <div class="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                            <!-- Rider Status & Live List Panel -->
+                            <div id="liveListPanel" class="space-y-3 max-h-[360px] overflow-y-auto pr-1">
                                 <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Active Riders (<span id="liveRiderCount">0</span>)</h4>
                                 <div id="liveRiderList" class="space-y-2 text-xs">
                                     <div class="p-4 text-center text-slate-400">Loading rider locations...</div>
+                                </div>
+                            </div>
+
+                            <!-- History Summary Stats Panel -->
+                            <div id="historyStatsPanel" class="hidden space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">GPS Route Summary</h4>
+                                <div class="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-3 text-xs">
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-500 font-medium">Rider</span>
+                                        <span id="histRiderName" class="font-bold text-slate-800 text-sm">-</span>
+                                    </div>
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-500 font-medium">Date</span>
+                                        <span id="histDate" class="font-bold text-slate-700">-</span>
+                                    </div>
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-500 font-medium">Start Time</span>
+                                        <span id="histStartTime" class="font-bold text-emerald-600">-</span>
+                                    </div>
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-500 font-medium">Last Update</span>
+                                        <span id="histEndTime" class="font-bold text-rose-600">-</span>
+                                    </div>
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-500 font-medium">Distance Travelled</span>
+                                        <span id="histDistance" class="font-extrabold text-blue-700 text-sm">0.00 KM</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-slate-500 font-medium">GPS Fix Points</span>
+                                        <span id="histPointsCount" class="font-bold text-slate-800">0</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -5658,6 +5721,7 @@
 
         function renderDeliveryBoysTable() {
             const tbody = document.getElementById('deliveryBoyTableBody');
+            try { if (typeof populateHistoryRiderDropdown === 'function') populateHistoryRiderDropdown(); } catch(e) {}
             if (!tbody) return;
             tbody.innerHTML = '';
 
@@ -8938,8 +9002,199 @@
         let leafletRiderMap = null;
         let leafletRiderMarkers = {};
         let riderLocationPollInterval = null;
+        let activeGpsMode = 'live'; // 'live' or 'history'
+        let historyPolyline = null;
+        let historyStartMarker = null;
+        let historyEndMarker = null;
+
+        function setGpsTrackingMode(mode) {
+            activeGpsMode = mode;
+            const liveSection = document.getElementById('gpsLiveControlsSection');
+            const historySection = document.getElementById('gpsHistoryControlsSection');
+            const liveTabBtn = document.getElementById('gpsModeLiveBtn');
+            const historyTabBtn = document.getElementById('gpsModeHistoryBtn');
+            const liveListPanel = document.getElementById('liveListPanel');
+            const historyStatsPanel = document.getElementById('historyStatsPanel');
+
+            if (mode === 'live') {
+                if (liveSection) liveSection.classList.remove('hidden');
+                if (historySection) historySection.classList.add('hidden');
+                if (liveListPanel) liveListPanel.classList.remove('hidden');
+                if (historyStatsPanel) historyStatsPanel.classList.add('hidden');
+                
+                if (liveTabBtn) {
+                    liveTabBtn.className = "px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1";
+                }
+                if (historyTabBtn) {
+                    historyTabBtn.className = "px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs border border-slate-200 transition flex items-center space-x-1";
+                }
+
+                clearGpsHistoryMapLayer();
+                fetchRiderLocations(true);
+            } else {
+                if (liveSection) liveSection.classList.add('hidden');
+                if (historySection) historySection.classList.remove('hidden');
+                if (liveListPanel) liveListPanel.classList.add('hidden');
+                if (historyStatsPanel) historyStatsPanel.classList.remove('hidden');
+
+                if (liveTabBtn) {
+                    liveTabBtn.className = "px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs border border-slate-200 transition flex items-center space-x-1";
+                }
+                if (historyTabBtn) {
+                    historyTabBtn.className = "px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1";
+                }
+
+                clearLiveRiderMarkers();
+                populateHistoryRiderDropdown();
+                
+                const dateInput = document.getElementById('historyDateSelect');
+                if (dateInput && !dateInput.value) {
+                    dateInput.value = new Date().toISOString().split('T')[0];
+                }
+            }
+        }
+
+        function clearLiveRiderMarkers() {
+            if (leafletRiderMap && leafletRiderMarkers) {
+                Object.keys(leafletRiderMarkers).forEach(id => {
+                    try { leafletRiderMap.removeLayer(leafletRiderMarkers[id]); } catch(e) {}
+                });
+                leafletRiderMarkers = {};
+            }
+        }
+
+        function clearGpsHistoryMapLayer() {
+            if (leafletRiderMap) {
+                if (historyPolyline) {
+                    try { leafletRiderMap.removeLayer(historyPolyline); } catch(e) {}
+                    historyPolyline = null;
+                }
+                if (historyStartMarker) {
+                    try { leafletRiderMap.removeLayer(historyStartMarker); } catch(e) {}
+                    historyStartMarker = null;
+                }
+                if (historyEndMarker) {
+                    try { leafletRiderMap.removeLayer(historyEndMarker); } catch(e) {}
+                    historyEndMarker = null;
+                }
+            }
+        }
+
+        function populateHistoryRiderDropdown() {
+            const sel = document.getElementById('historyRiderSelect');
+            if (!sel) return;
+            const riders = (db && db.deliveryBoys) ? db.deliveryBoys : [];
+            sel.innerHTML = `<option value="">-- Select Rider --</option>` + riders.map(r => `<option value="${r.id}">${r.name} (${r.id})</option>`).join('');
+        }
+
+        async function loadRiderGpsHistory() {
+            const sel = document.getElementById('historyRiderSelect');
+            const dateInput = document.getElementById('historyDateSelect');
+            const riderId = sel ? sel.value : '';
+            const dateStr = dateInput ? dateInput.value : '';
+
+            if (!riderId) {
+                alert('Please select a rider to view route history.');
+                return;
+            }
+            if (!dateStr) {
+                alert('Please select a date.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/rider-location-history?riderId=${encodeURIComponent(riderId)}&date=${encodeURIComponent(dateStr)}`);
+                if (!res.ok) {
+                    alert('Failed to fetch rider location history.');
+                    return;
+                }
+                const data = await res.json();
+                renderRiderGpsHistory(data);
+            } catch (e) {
+                console.error('Error fetching GPS history:', e);
+                alert('Error loading rider GPS history.');
+            }
+        }
+
+        function renderRiderGpsHistory(data) {
+            initRiderLocationMapIfNeeded();
+            clearLiveRiderMarkers();
+            clearGpsHistoryMapLayer();
+
+            const riderNameEl = document.getElementById('histRiderName');
+            const dateEl = document.getElementById('histDate');
+            const startEl = document.getElementById('histStartTime');
+            const endEl = document.getElementById('histEndTime');
+            const distEl = document.getElementById('histDistance');
+            const pointsEl = document.getElementById('histPointsCount');
+
+            const riderObj = (db && db.deliveryBoys) ? db.deliveryBoys.find(r => r.id === data.riderId) : null;
+            const riderName = riderObj ? riderObj.name : data.riderId;
+
+            if (riderNameEl) riderNameEl.innerText = riderName;
+            if (dateEl) dateEl.innerText = data.date;
+            if (distEl) distEl.innerText = `${data.totalDistanceKm || 0} KM`;
+            if (pointsEl) pointsEl.innerText = data.pointCount || 0;
+
+            const locs = data.locations || [];
+
+            if (locs.length === 0) {
+                if (startEl) startEl.innerText = '-';
+                if (endEl) endEl.innerText = '-';
+                alert(`No GPS history records found for ${riderName} on ${data.date}.`);
+                return;
+            }
+
+            const formatTime = (iso) => {
+                try {
+                    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                } catch(e) { return '-'; }
+            };
+
+            if (startEl) startEl.innerText = formatTime(locs[0].recordedAt);
+            if (endEl) endEl.innerText = formatTime(locs[locs.length - 1].recordedAt);
+
+            if (leafletRiderMap && typeof L !== 'undefined') {
+                const latLngs = locs.map(l => [l.latitude, l.longitude]);
+
+                // Draw Polyline
+                historyPolyline = L.polyline(latLngs, {
+                    color: '#2563eb',
+                    weight: 5,
+                    opacity: 0.8,
+                    smoothFactor: 1
+                }).addTo(leafletRiderMap);
+
+                // Start Marker (Green Circle)
+                const startPoint = locs[0];
+                const startIcon = L.divIcon({
+                    className: 'custom-gps-start-icon',
+                    html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:12px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3)">S</div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                historyStartMarker = L.marker([startPoint.latitude, startPoint.longitude], { icon: startIcon })
+                    .bindPopup(`<div class="text-xs font-sans"><strong>🟢 Route Start</strong><br>Time: ${formatTime(startPoint.recordedAt)}<br>Lat: ${startPoint.latitude}, Lng: ${startPoint.longitude}</div>`)
+                    .addTo(leafletRiderMap);
+
+                // End / Current Marker (Red Circle)
+                const endPoint = locs[locs.length - 1];
+                const endIcon = L.divIcon({
+                    className: 'custom-gps-end-icon',
+                    html: '<div style="background:#dc2626;color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:bold;font-size:12px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3)">E</div>',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                historyEndMarker = L.marker([endPoint.latitude, endPoint.longitude], { icon: endIcon })
+                    .bindPopup(`<div class="text-xs font-sans"><strong>🔴 Latest Fix</strong><br>Time: ${formatTime(endPoint.recordedAt)}<br>Lat: ${endPoint.latitude}, Lng: ${endPoint.longitude}</div>`)
+                    .addTo(leafletRiderMap);
+
+                leafletRiderMap.fitBounds(historyPolyline.getBounds(), { padding: [30, 30] });
+            }
+        }
 
         async function fetchRiderLocations(manual = false) {
+            if (activeGpsMode === 'history') return;
             try {
                 const res = await fetch('/api/rider-locations');
                 const contentType = res.headers.get('content-type') || '';

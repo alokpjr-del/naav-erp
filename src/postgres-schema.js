@@ -205,12 +205,26 @@ async function initTables() {
             `);
             await client.query(`ALTER TABLE counters ADD COLUMN IF NOT EXISTS val INTEGER`);
 
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS rider_location_history (
+                    id BIGSERIAL PRIMARY KEY,
+                    rider_id VARCHAR(100) NOT NULL,
+                    latitude DOUBLE PRECISION NOT NULL,
+                    longitude DOUBLE PRECISION NOT NULL,
+                    accuracy DOUBLE PRECISION,
+                    recorded_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            `);
+
             // Useful Indexes (columns guaranteed to exist by the ALTER statements above)
             await client.query(`CREATE INDEX IF NOT EXISTS idx_entries_orderid ON entries("orderId")`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_customers_mobile ON customers(mobile)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_restaurants_name ON restaurants(name)`);
             await client.query(`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)`);
+            await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_loc_hist_rider_id ON rider_location_history(rider_id)`);
+            await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_loc_hist_recorded_at ON rider_location_history(recorded_at)`);
+            await client.query(`CREATE INDEX IF NOT EXISTS idx_rider_loc_hist_rider_date ON rider_location_history(rider_id, recorded_at)`);
 
             // Default Inserts with ON CONFLICT DO NOTHING
             await client.query(`
