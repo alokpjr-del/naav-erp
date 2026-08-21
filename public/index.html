@@ -2561,6 +2561,15 @@
     </div>
 
     <script>
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         let db = {
         settings: { companyName: 'NAAV ACCOUNTS', customCategories: [], lastBackupDate: 'Never' },
         entries: [], expenses: [], recycleBin: [], restaurants: [], deliveryBoys: [],
@@ -9625,7 +9634,10 @@
             if (riderFilter) url += `&riderId=${encodeURIComponent(riderFilter)}`;
 
             fetch(url)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
             .then(data => {
                 if (!data.success) {
                     document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">${data.error || 'Failed to load rider orders'}</td></tr>`;
@@ -9634,9 +9646,15 @@
 
                 rawRiderOrdersData = data.orders || [];
                 document.getElementById('riderOrdersCountBadge').innerText = rawRiderOrdersData.length;
-                renderRiderOrdersTable(rawRiderOrdersData);
+                try {
+                    renderRiderOrdersTable(rawRiderOrdersData);
+                } catch (renderErr) {
+                    console.error('Error rendering rider orders table:', renderErr);
+                    document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">UI Render Error: ${renderErr.message}</td></tr>`;
+                }
             })
             .catch(err => {
+                console.error('Network/API error fetching rider orders:', err);
                 document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">Network error loading rider orders: ${err.message}</td></tr>`;
             });
         }
