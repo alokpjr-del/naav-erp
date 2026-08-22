@@ -396,6 +396,77 @@ router.post('/rider-location', async (req, res) => {
             console.error('Error inserting into rider_location_history:', dbErr);
         }
 
+        // REAL-TIME RIDER ORDER DISTANCE ACCUMULATION WITH GPS NOISE & ACCURACY FILTER
+        try {
+            const activeOrderRes = await pool.query(
+                `SELECT order_id, distance_km, accept_latitude, accept_longitude 
+                 FROM rider_orders 
+                 WHERE rider_id = $1 AND UPPER(status) IN ('ACCEPTED', 'PICKED_UP')
+                 ORDER BY created_at DESC LIMIT 1`,
+                [session.riderId]
+            );
+
+            if (activeOrderRes.rows.length > 0) {
+                const order = activeOrderRes.rows[0];
+                const acc = Number(accuracy || 0);
+                const lat = Number(latitude);
+                const lon = Number(longitude);
+
+                // GPS ACCURACY FILTER: Ignore points with accuracy > 50 meters or invalid coords
+                if (acc <= 50 && !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+                    const lastPointRes = await pool.query(
+                        `SELECT latitude, longitude, recorded_at 
+                         FROM rider_order_location_points 
+                         WHERE rider_order_id = $1 
+                         ORDER BY recorded_at DESC LIMIT 1`,
+                        [order.order_id]
+                    );
+
+                    let shouldRecord = false;
+                    let distIncrement = 0;
+
+                    if (lastPointRes.rows.length === 0) {
+                        shouldRecord = true;
+                    } else {
+                        const prevLat = Number(lastPointRes.rows[0].latitude);
+                        const prevLon = Number(lastPointRes.rows[0].longitude);
+                        const prevTime = new Date(lastPointRes.rows[0].recorded_at).getTime();
+                        const currTime = timestamp ? new Date(timestamp).getTime() : Date.now();
+
+                        distIncrement = calculateHaversineDistanceKm(prevLat, prevLon, lat, lon);
+                        const timeDiffSec = Math.max(1, (currTime - prevTime) / 1000);
+                        const speedKmH = (distIncrement / timeDiffSec) * 3600;
+
+                        // FILTER NOISE & IMPOSSIBLE JUMPS:
+                        // Ignore coordinates within ~5m (dist < 0.005 km)
+                        // Ignore speed > 120 km/h (GPS jump)
+                        if (distIncrement >= 0.005 && speedKmH <= 120) {
+                            shouldRecord = true;
+                        }
+                    }
+
+                    if (shouldRecord) {
+                        await pool.query(
+                            `INSERT INTO rider_order_location_points (rider_order_id, rider_id, latitude, longitude, accuracy, recorded_at)
+                             VALUES ($1, $2, $3, $4, $5, $6)`,
+                            [order.order_id, session.riderId, lat, lon, acc, timestamp ? new Date(timestamp) : new Date()]
+                        );
+
+                        if (distIncrement > 0) {
+                            await pool.query(
+                                `UPDATE rider_orders 
+                                 SET distance_km = COALESCE(distance_km, 0) + $1 
+                                 WHERE order_id = $2 AND UPPER(status) IN ('ACCEPTED', 'PICKED_UP')`,
+                                [Number(distIncrement.toFixed(2)), order.order_id]
+                            );
+                        }
+                    }
+                }
+            }
+        } catch (distErr) {
+            console.error('Error tracking order distance:', distErr);
+        }
+
         res.json({ success: true, data: updatedRecord });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -566,3 +637,5 @@ router.get('/rider-locations', (req, res) => {
 module.exports = router;
 module.exports.getAuthenticatedRiderSession = getAuthenticatedRiderSession;
 module.exports.generateRiderJwt = generateRiderJwt;
+module.exports.calculateHaversineDistanceKm = calculateHaversineDistanceKm;
+module.exports.riderLocationsStore = riderLocationsStore;

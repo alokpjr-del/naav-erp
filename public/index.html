@@ -1141,19 +1141,47 @@
                     <div class="erp-card p-6 space-y-4">
                         <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
                             <div>
-                                <h3 class="text-base font-bold text-slate-900 flex items-center">
-                                    <i class="fa-solid fa-motorcycle text-amber-500 mr-2"></i>Rider Delivery Orders
-                                </h3>
-                                <p class="text-xs text-slate-500">Create phone-call delivery orders, assign riders, & track live delivery status</p>
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="text-base font-extrabold text-slate-900 flex items-center">
+                                        <i class="fa-solid fa-motorcycle text-amber-500 mr-2"></i>Rider Delivery Orders
+                                    </h3>
+                                    <span id="riderDayStatusBadge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">🟢 DAY OPEN</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    <span id="riderOrdersDateLabel" class="font-bold text-slate-700">Today's Rider Orders</span>
+                                    <span class="mx-1">•</span> Create phone-call delivery orders, assign riders, &amp; track live delivery status
+                                </p>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-2 flex-wrap gap-1.5">
+                                <button type="button" onclick="openRiderDayHistoryModal()" class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl text-xs border border-slate-200 shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-clock-rotate-left text-blue-600"></i><span>📅 HISTORY</span>
+                                </button>
+                                <button type="button" id="btnRiderDayClose" onclick="openDayCloseConfirmationModal()" class="px-3.5 py-2 bg-slate-900 hover:bg-black text-amber-400 font-bold rounded-xl text-xs border border-slate-700 shadow-md transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-lock"></i><span>🔒 DAY CLOSE</span>
+                                </button>
                                 <button type="button" onclick="loadRiderOrdersTable()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs border border-slate-200 transition flex items-center space-x-1.5 shadow-sm">
-                                    <i class="fa-solid fa-rotate"></i><span>Refresh Orders</span>
+                                    <i class="fa-solid fa-rotate"></i><span>Refresh</span>
                                 </button>
                                 <button type="button" onclick="openCreateRiderOrderModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition flex items-center space-x-1.5">
                                     <i class="fa-solid fa-plus"></i><span>+ CREATE RIDER ORDER</span>
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- DAY CLOSED BANNER (Shown when selected/current day is closed) -->
+                        <div id="bannerDayClosed" class="hidden p-4 bg-slate-900 text-amber-400 rounded-2xl border border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center space-x-3">
+                                <div class="p-2 bg-amber-400/10 rounded-xl text-amber-400">
+                                    <i class="fa-solid fa-lock text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-extrabold text-white" id="bannerDayClosedTitle">🔒 DAY CLOSED</h4>
+                                    <p class="text-xs text-slate-400">All orders for this date are locked &amp; permanently archived in Day History.</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="openRiderDayHistoryModal()" class="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs transition">
+                                VIEW DAY HISTORY →
+                            </button>
                         </div>
 
                         <!-- Rider Delivery Earnings & Accounting Summary Bar -->
@@ -1189,6 +1217,16 @@
                         <div class="flex items-center justify-between flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
                             <div class="flex items-center space-x-3 flex-wrap gap-2">
                                 <div class="flex items-center space-x-1.5">
+                                    <label class="text-xs font-bold text-slate-600">Period:</label>
+                                    <select id="riderOrderFilterPeriod" onchange="loadRiderOrdersTable()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="weekly">This Week</option>
+                                        <option value="monthly">This Month</option>
+                                        <option value="ALL">All Dates</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
                                     <label class="text-xs font-bold text-slate-600">Status:</label>
                                     <select id="riderOrderFilterStatus" onchange="loadRiderOrdersTable()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
                                         <option value="ALL">All Statuses</option>
@@ -1200,14 +1238,27 @@
                                     </select>
                                 </div>
                                 <div class="flex items-center space-x-1.5">
+                                    <label class="text-xs font-bold text-slate-600">Payment:</label>
+                                    <select id="riderOrderFilterPayment" onchange="loadRiderOrdersTable()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                                        <option value="ALL">All Payment Modes</option>
+                                        <option value="CASH">CASH</option>
+                                        <option value="UPI">UPI</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
                                     <label class="text-xs font-bold text-slate-600">Rider:</label>
                                     <select id="riderOrderFilterRider" onchange="loadRiderOrdersTable()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
                                         <option value="">All Riders</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="text-xs font-semibold text-slate-500">
-                                Total Orders: <span id="riderOrdersCountBadge" class="font-bold text-blue-600">0</span>
+                            <div class="flex items-center space-x-3">
+                                <button type="button" onclick="exportRiderOrdersCsv()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-file-excel"></i><span>EXPORT EXCEL</span>
+                                </button>
+                                <div class="text-xs font-semibold text-slate-500">
+                                    Total Orders: <span id="riderOrdersCountBadge" class="font-bold text-blue-600">0</span>
+                                </div>
                             </div>
                         </div>
 
@@ -1216,24 +1267,25 @@
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead>
                                     <tr class="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">
-                                        <th class="p-3.5">Order ID</th>
-                                        <th class="p-3.5">Customer</th>
-                                        <th class="p-3.5">Mobile</th>
-                                        <th class="p-3.5">From</th>
-                                        <th class="p-3.5">To</th>
-                                        <th class="p-3.5">Food Amt</th>
-                                        <th class="p-3.5">Delivery Chg</th>
-                                        <th class="p-3.5">Total Amt</th>
-                                        <th class="p-3.5">Assigned Rider</th>
-                                        <th class="p-3.5">Status</th>
-                                        <th class="p-3.5">Payment</th>
-                                        <th class="p-3.5">Created Time</th>
-                                        <th class="p-3.5 text-right">Action</th>
+                                        <th class="p-3.5 min-w-[150px]">ORDER ID</th>
+                                        <th class="p-3.5">CUSTOMER</th>
+                                        <th class="p-3.5">MOBILE</th>
+                                        <th class="p-3.5">FROM</th>
+                                        <th class="p-3.5">TO</th>
+                                        <th class="p-3.5">FOOD</th>
+                                        <th class="p-3.5">DELIVERY</th>
+                                        <th class="p-3.5">TOTAL</th>
+                                        <th class="p-3.5">RIDER</th>
+                                        <th class="p-3.5">DISTANCE</th>
+                                        <th class="p-3.5">STATUS</th>
+                                        <th class="p-3.5">PAYMENT</th>
+                                        <th class="p-3.5">CREATED</th>
+                                        <th class="p-3.5 text-right">ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody id="riderOrdersTableBody" class="divide-y divide-slate-100">
                                     <tr>
-                                        <td colspan="13" class="p-6 text-center text-slate-400">Loading rider delivery orders...</td>
+                                        <td colspan="14" class="p-6 text-center text-slate-400">Loading rider delivery orders...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -2079,11 +2131,40 @@
 
                 <!-- RIDER PERFORMANCE -->
                 <div id="tab-riderPerformance" class="tab-content hidden space-y-6">
-                    <div class="erp-card p-5 space-y-4">
-                        <h3 class="text-sm font-bold text-slate-800 flex items-center">
-                            <i class="fa-solid fa-person-biking text-indigo-600 mr-2"></i>Rider Performance Analytics
-                        </h3>
-                        <div id="riderPerformanceContent" class="space-y-4"></div>
+                    <div class="erp-card p-6 space-y-5">
+                        <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="text-base font-extrabold text-slate-900 flex items-center">
+                                    <i class="fa-solid fa-person-biking text-indigo-600 mr-2"></i>Rider Performance &amp; Analytics Dashboard
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Track rider delivery distance, average delivery duration, on-time rates &amp; earnings analytics</p>
+                            </div>
+                            <div class="flex items-center space-x-3 flex-wrap gap-2">
+                                <div class="flex items-center space-x-1.5">
+                                    <label class="text-xs font-bold text-slate-600">Period:</label>
+                                    <select id="riderPerfFilterPeriod" onchange="loadRiderPerformanceDashboard()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="weekly">This Week</option>
+                                        <option value="monthly">This Month</option>
+                                        <option value="ALL">All Time</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
+                                    <label class="text-xs font-bold text-slate-600">Rider:</label>
+                                    <select id="riderPerfFilterRider" onchange="loadRiderPerformanceDashboard()" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500">
+                                        <option value="ALL">All Riders</option>
+                                    </select>
+                                </div>
+                                <button type="button" onclick="loadRiderPerformanceDashboard()" class="px-3.5 py-1.5 bg-slate-900 text-white font-bold rounded-xl text-xs transition shadow-sm">
+                                    <i class="fa-solid fa-rotate mr-1"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="riderPerformanceContent" class="space-y-6">
+                            <div class="p-8 text-center text-slate-400 font-medium">Loading rider performance dashboard...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -2585,6 +2666,146 @@
             <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
                 <button type="button" onclick="closePaymentModeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">Cancel</button>
                 <button type="button" id="pmSaveBtn" onclick="savePaymentModeChange()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIDER DAY CLOSE CONFIRMATION MODAL -->
+    <div id="modal-riderDayClose" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-slate-900 text-amber-400 rounded-xl">
+                        <i class="fa-solid fa-lock text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900" id="riderDayCloseModalTitle">Close Rider Orders for Today?</h3>
+                        <p class="text-xs text-slate-500">Lock &amp; archive all Rider Orders for this business date</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDayCloseConfirmationModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="p-4 bg-slate-900 text-white rounded-2xl space-y-3 shadow-md">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-xs font-bold text-slate-400">BUSINESS DATE</span>
+                        <span id="closeModalBusinessDate" class="text-sm font-extrabold text-amber-400 font-mono">2026-08-22</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-slate-400">Total Rider Orders:</span>
+                            <span id="closeModalTotalOrders" class="font-bold text-white ml-1">0</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Delivered:</span>
+                            <span id="closeModalDeliveredCount" class="font-bold text-emerald-400 ml-1">0</span>
+                            <span class="text-slate-500 ml-1">(Pending: <span id="closeModalPendingCount">0</span>)</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Total Order Value:</span>
+                            <span id="closeModalTotalValue" class="font-bold text-amber-400 ml-1">₹0.00</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Rider Earnings:</span>
+                            <span id="closeModalRiderEarnings" class="font-bold text-emerald-400 ml-1">₹0.00</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Cash Collection:</span>
+                            <span id="closeModalCashCollection" class="font-bold text-amber-300 ml-1">₹0.00</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">UPI Collection:</span>
+                            <span id="closeModalUpiCollection" class="font-bold text-blue-300 ml-1">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Rider Breakdown Summary</h4>
+                    <div id="closeModalRiderBreakdown" class="max-h-40 overflow-y-auto space-y-1.5 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
+                        <div class="text-slate-400 text-center py-2 font-medium">No active rider activity today.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dayCloseErrorMsg" class="text-rose-600 text-xs font-semibold hidden p-3 bg-rose-50 border border-rose-200 rounded-xl"></div>
+
+            <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeDayCloseConfirmationModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">CANCEL</button>
+                <button type="button" id="btnConfirmCloseDay" onclick="executeRiderDayClose()" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-amber-400 font-bold rounded-xl text-xs shadow-md transition flex items-center space-x-2">
+                    <i class="fa-solid fa-lock"></i><span>CLOSE DAY</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIDER DAY HISTORY MODAL -->
+    <div id="modal-riderDayHistory" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                        <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900">Rider Order Day History</h3>
+                        <p class="text-xs text-slate-500">View saved &amp; permanently archived Rider Orders by closed business date</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeRiderDayHistoryModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">
+                            <th class="p-3.5">BUSINESS DATE</th>
+                            <th class="p-3.5">STATUS</th>
+                            <th class="p-3.5">ORDERS</th>
+                            <th class="p-3.5">DELIVERED</th>
+                            <th class="p-3.5">RIDER EARNINGS</th>
+                            <th class="p-3.5">CASH</th>
+                            <th class="p-3.5">UPI</th>
+                            <th class="p-3.5 text-right">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="riderDayHistoryTableBody" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="8" class="p-6 text-center text-slate-400">Loading historical closed days...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeRiderDayHistoryModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIDER ORDER ROUTE MAP MODAL -->
+    <div id="modal-riderOrderRoute" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i class="fa-solid fa-route text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900" id="routeModalTitle">Rider Delivery Route</h3>
+                        <p class="text-xs text-slate-500">GPS tracked path from order acceptance to delivery</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeRiderOrderRouteModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <div id="routeModalContent" class="space-y-4">
+                <div class="p-6 text-center text-slate-400 font-medium">Loading route points...</div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeRiderOrderRouteModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Close</button>
             </div>
         </div>
     </div>
@@ -9673,40 +9894,143 @@
             .catch(err => console.error('Error fetching rider orders accounting summary:', err));
         }
 
-        function loadRiderOrdersTable() {
+        let currentRiderDayStatus = null;
+        let selectedHistoricalBusinessDate = null;
+
+        function fetchRiderOrdersDayStatus() {
+            return fetch('/api/rider-orders/day-status')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentRiderDayStatus = data;
+                    updateRiderDayStatusUI(data);
+                }
+                return data;
+            })
+            .catch(err => console.error('Error fetching rider day status:', err));
+        }
+
+        function updateRiderDayStatusUI(statusData) {
+            if (!statusData) return;
+            const dateStr = selectedHistoricalBusinessDate || statusData.openBusinessDate || statusData.todayDate;
+            const formattedDate = new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            
+            const dateLabel = document.getElementById('riderOrdersDateLabel');
+            if (dateLabel) {
+                if (selectedHistoricalBusinessDate) {
+                    dateLabel.innerText = `Historical Rider Orders — ${formattedDate} (${selectedHistoricalBusinessDate})`;
+                } else {
+                    dateLabel.innerText = `Today's Rider Orders — ${formattedDate}`;
+                }
+            }
+
+            const statusBadge = document.getElementById('riderDayStatusBadge');
+            const dayCloseBtn = document.getElementById('btnRiderDayClose');
+            const banner = document.getElementById('bannerDayClosed');
+
+            if (selectedHistoricalBusinessDate) {
+                if (statusBadge) {
+                    statusBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-300 shadow-sm';
+                    statusBadge.innerHTML = `<i class="fa-solid fa-clock-rotate-left mr-1"></i>HISTORICAL DATE`;
+                }
+                if (banner) banner.classList.add('hidden');
+                if (dayCloseBtn) dayCloseBtn.disabled = true;
+            } else if (statusData.isClosed) {
+                if (statusBadge) {
+                    statusBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-slate-900 text-amber-400 border border-slate-700 shadow-sm';
+                    statusBadge.innerHTML = `<i class="fa-solid fa-lock text-amber-400 mr-1"></i>DAY CLOSED`;
+                }
+                if (banner) {
+                    banner.classList.remove('hidden');
+                    const bTitle = document.getElementById('bannerDayClosedTitle');
+                    if (bTitle) bTitle.innerText = `🔒 DAY CLOSED — ${formattedDate}`;
+                }
+                if (dayCloseBtn) {
+                    dayCloseBtn.disabled = true;
+                    dayCloseBtn.className = 'px-3.5 py-2 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs border border-slate-700 cursor-not-allowed flex items-center space-x-1.5';
+                }
+            } else {
+                if (statusBadge) {
+                    statusBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm';
+                    statusBadge.innerHTML = `🟢 DAY OPEN`;
+                }
+                if (banner) banner.classList.add('hidden');
+                if (dayCloseBtn) {
+                    dayCloseBtn.disabled = false;
+                    dayCloseBtn.className = 'px-3.5 py-2 bg-slate-900 hover:bg-black text-amber-400 font-bold rounded-xl text-xs border border-slate-700 shadow-md transition flex items-center space-x-1.5';
+                }
+            }
+        }
+
+        function loadRiderOrdersTable(targetDate = null) {
+            if (targetDate) {
+                selectedHistoricalBusinessDate = targetDate;
+            } else {
+                selectedHistoricalBusinessDate = null;
+            }
+
             populateRiderOrderRidersDropdown();
-            fetchRiderOrdersSummary();
+            fetchRiderOrdersDayStatus().then(statusData => {
+                fetchRiderOrdersSummary(selectedHistoricalBusinessDate || (statusData ? statusData.openBusinessDate : null));
 
-            const statusFilter = document.getElementById('riderOrderFilterStatus') ? document.getElementById('riderOrderFilterStatus').value : 'ALL';
+                const statusFilter = document.getElementById('riderOrderFilterStatus') ? document.getElementById('riderOrderFilterStatus').value : 'ALL';
+                const riderFilter = document.getElementById('riderOrderFilterRider') ? document.getElementById('riderOrderFilterRider').value : '';
+
+                let url = `/api/rider-orders-admin?status=${encodeURIComponent(statusFilter)}`;
+                if (riderFilter) url += `&riderId=${encodeURIComponent(riderFilter)}`;
+                if (selectedHistoricalBusinessDate) {
+                    url += `&businessDate=${encodeURIComponent(selectedHistoricalBusinessDate)}`;
+                } else if (statusData && statusData.openBusinessDate) {
+                    url += `&businessDate=${encodeURIComponent(statusData.openBusinessDate)}`;
+                }
+
+                fetch(url)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data.success) {
+                        document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">${data.error || 'Failed to load rider orders'}</td></tr>`;
+                        return;
+                    }
+
+                    rawRiderOrdersData = data.orders || [];
+                    document.getElementById('riderOrdersCountBadge').innerText = rawRiderOrdersData.length;
+                    try {
+                        renderRiderOrdersTable(rawRiderOrdersData);
+                    } catch (renderErr) {
+                        console.error('Error rendering rider orders table:', renderErr);
+                        document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">UI Render Error: ${renderErr.message}</td></tr>`;
+                    }
+                })
+                .catch(err => {
+                    console.error('Network/API error fetching rider orders:', err);
+                    document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">Network error loading rider orders: ${err.message}</td></tr>`;
+                });
+            });
+        }
+
+        function fetchRiderOrdersSummary(businessDateStr = null) {
             const riderFilter = document.getElementById('riderOrderFilterRider') ? document.getElementById('riderOrderFilterRider').value : '';
-
-            let url = `/api/rider-orders-admin?status=${encodeURIComponent(statusFilter)}`;
-            if (riderFilter) url += `&riderId=${encodeURIComponent(riderFilter)}`;
+            let url = `/api/rider-orders-summary`;
+            const params = [];
+            if (riderFilter) params.push(`riderId=${encodeURIComponent(riderFilter)}`);
+            if (businessDateStr) params.push(`businessDate=${encodeURIComponent(businessDateStr)}`);
+            if (params.length > 0) url += `?${params.join('&')}`;
 
             fetch(url)
-            .then(res => {
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
-                if (!data.success) {
-                    document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">${data.error || 'Failed to load rider orders'}</td></tr>`;
-                    return;
-                }
-
-                rawRiderOrdersData = data.orders || [];
-                document.getElementById('riderOrdersCountBadge').innerText = rawRiderOrdersData.length;
-                try {
-                    renderRiderOrdersTable(rawRiderOrdersData);
-                } catch (renderErr) {
-                    console.error('Error rendering rider orders table:', renderErr);
-                    document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">UI Render Error: ${renderErr.message}</td></tr>`;
+                if (data.success) {
+                    if (document.getElementById('summaryDeliveredCount')) document.getElementById('summaryDeliveredCount').innerText = data.deliveredOrdersCount || 0;
+                    if (document.getElementById('summaryRiderEarnings')) document.getElementById('summaryRiderEarnings').innerText = `₹${(data.totalRiderEarnings || 0).toFixed(2)}`;
+                    if (document.getElementById('summaryCashCollection')) document.getElementById('summaryCashCollection').innerText = `₹${(data.cashCollection || 0).toFixed(2)}`;
+                    if (document.getElementById('summaryUpiCollection')) document.getElementById('summaryUpiCollection').innerText = `₹${(data.upiCollection || 0).toFixed(2)}`;
+                    if (document.getElementById('summaryTotalOrderValue')) document.getElementById('summaryTotalOrderValue').innerText = `₹${(data.totalAmount || 0).toFixed(2)}`;
                 }
             })
-            .catch(err => {
-                console.error('Network/API error fetching rider orders:', err);
-                document.getElementById('riderOrdersTableBody').innerHTML = `<tr><td colspan="13" class="p-6 text-center text-rose-500 font-semibold">Network error loading rider orders: ${err.message}</td></tr>`;
-            });
+            .catch(err => console.error('Error fetching rider orders accounting summary:', err));
         }
 
         function renderRiderOrdersTable(orders) {
@@ -9714,7 +10038,10 @@
             if (!tbody) return;
 
             if (!orders || orders.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-400">No rider delivery orders found.</td></tr>`;
+                const emptyMsg = selectedHistoricalBusinessDate 
+                    ? `No archived Rider Orders found for ${selectedHistoricalBusinessDate}.`
+                    : `No active Rider Orders for the current business day.`;
+                tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-center text-slate-400 font-medium">${emptyMsg}</td></tr>`;
                 return;
             }
 
@@ -9723,33 +10050,173 @@
 
             tbody.innerHTML = orders.map(o => {
                 const statusBadgeHtml = getRiderOrderStatusBadge(o.status);
-                const paymentHtml = o.status === 'DELIVERED' 
-                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">${o.paymentMode || 'CASH'}</span>`
-                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Pending</span>`;
+                let paymentHtml = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">⏳ PENDING</span>`;
+                if (o.status === 'DELIVERED') {
+                    const mode = (o.paymentMode || 'CASH').toUpperCase();
+                    if (mode === 'CASH') {
+                        paymentHtml = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">💵 CASH</span>`;
+                    } else {
+                        paymentHtml = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">📱 UPI</span>`;
+                    }
+                }
 
                 const riderName = ridersMap[o.riderId] || o.riderId || 'Unassigned';
                 const createdTimeStr = o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : '-';
 
                 return `
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                        <td class="p-3.5 font-bold font-mono text-blue-600 cursor-pointer hover:underline" onclick="viewRiderOrderDetail('${o.orderId}')">${o.orderId}</td>
-                        <td class="p-3.5 font-medium text-slate-800">${escapeHtml(o.customerName || '-')}</td>
-                        <td class="p-3.5 font-medium text-blue-600"><a href="tel:${o.customerMobile}" class="hover:underline">📞 ${escapeHtml(o.customerMobile || '-')}</a></td>
-                        <td class="p-3.5 text-slate-600 max-w-[140px] truncate" title="${escapeHtml(o.fromLocation || '-')}">${escapeHtml(o.fromLocation || '-')}</td>
-                        <td class="p-3.5 text-slate-600 max-w-[140px] truncate" title="${escapeHtml(o.toLocation || '-')}">${escapeHtml(o.toLocation || '-')}</td>
-                        <td class="p-3.5 font-semibold text-slate-700">₹${Number(o.foodAmount || 0).toFixed(2)}</td>
-                        <td class="p-3.5 font-semibold text-amber-700">₹${Number(o.deliveryCharge || 0).toFixed(2)}</td>
-                        <td class="p-3.5 font-bold text-slate-900">₹${Number(o.totalAmount || 0).toFixed(2)}</td>
-                        <td class="p-3.5 font-semibold text-slate-700">🚴 ${escapeHtml(riderName)}</td>
+                    <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+                        <td class="p-3.5 min-w-[150px]">
+                            <div class="font-extrabold text-slate-900 text-sm font-mono tracking-tight cursor-pointer hover:text-blue-600 hover:underline" onclick="viewRiderOrderDetail('${o.orderId}')">${escapeHtml(o.orderId)}</div>
+                            <div class="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider mt-0.5"><i class="fa-solid fa-motorcycle mr-1"></i>RIDER ORDER</div>
+                        </td>
+                        <td class="p-3.5 font-semibold text-slate-900">${escapeHtml(o.customerName || '-')}</td>
+                        <td class="p-3.5 font-bold text-blue-600"><a href="tel:${o.customerMobile}" class="hover:underline">📞 ${escapeHtml(o.customerMobile || '-')}</a></td>
+                        <td class="p-3.5 text-slate-600 max-w-[140px] truncate font-medium" title="${escapeHtml(o.fromLocation || '-')}">${escapeHtml(o.fromLocation || '-')}</td>
+                        <td class="p-3.5 text-slate-600 max-w-[140px] truncate font-medium" title="${escapeHtml(o.toLocation || '-')}">${escapeHtml(o.toLocation || '-')}</td>
+                        <td class="p-3.5 font-bold text-slate-700">₹${Number(o.foodAmount || 0).toFixed(2)}</td>
+                        <td class="p-3.5 font-bold text-amber-700">₹${Number(o.deliveryCharge || 0).toFixed(2)}</td>
+                        <td class="p-3.5 font-extrabold text-slate-900 text-sm">₹${Number(o.totalAmount || 0).toFixed(2)}</td>
+                        <td class="p-3.5">
+                            <span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-800 rounded-full font-bold text-[11px] inline-flex items-center">
+                                <i class="fa-solid fa-user text-slate-500 mr-1.5"></i>${escapeHtml(riderName)}
+                            </span>
+                        </td>
+                        <td class="p-3.5 font-bold text-blue-700 font-mono">
+                            ${Number(o.distanceKm || 0).toFixed(2)} KM
+                        </td>
                         <td class="p-3.5">${statusBadgeHtml}</td>
                         <td class="p-3.5">${paymentHtml}</td>
-                        <td class="p-3.5 text-slate-500 text-[11px]">${createdTimeStr}</td>
+                        <td class="p-3.5 text-slate-500 text-[11px] font-medium">${createdTimeStr}</td>
                         <td class="p-3.5 text-right">
-                            <button type="button" onclick="viewRiderOrderDetail('${o.orderId}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] border border-slate-200 transition">View</button>
+                            <button type="button" onclick="viewRiderOrderDetail('${o.orderId}')" class="px-3 py-1 bg-slate-900 hover:bg-black text-white font-bold rounded-lg text-[11px] transition shadow-sm">View</button>
                         </td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        function openDayCloseConfirmationModal() {
+            fetchRiderOrdersDayStatus().then(statusData => {
+                if (!statusData || !statusData.summary) {
+                    alert('Unable to load day close summary.');
+                    return;
+                }
+
+                if (statusData.isClosed) {
+                    alert(`${statusData.todayDate} is already closed.`);
+                    return;
+                }
+
+                const sum = statusData.summary;
+                document.getElementById('riderDayCloseModalTitle').innerText = `Close Rider Orders for ${sum.businessDate}?`;
+                document.getElementById('closeModalBusinessDate').innerText = sum.businessDate;
+                document.getElementById('closeModalTotalOrders').innerText = sum.totalOrders;
+                document.getElementById('closeModalDeliveredCount').innerText = sum.deliveredOrders;
+                document.getElementById('closeModalPendingCount').innerText = sum.pendingOrders;
+                document.getElementById('closeModalTotalValue').innerText = `₹${sum.totalOrderValue.toFixed(2)}`;
+                document.getElementById('closeModalRiderEarnings').innerText = `₹${sum.riderEarnings.toFixed(2)}`;
+                document.getElementById('closeModalCashCollection').innerText = `₹${sum.cashCollection.toFixed(2)}`;
+                document.getElementById('closeModalUpiCollection').innerText = `₹${sum.upiCollection.toFixed(2)}`;
+
+                const bdContainer = document.getElementById('closeModalRiderBreakdown');
+                if (sum.riderBreakdown && sum.riderBreakdown.length > 0) {
+                    bdContainer.innerHTML = sum.riderBreakdown.map(r => `
+                        <div class="p-2 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
+                            <span class="font-bold text-slate-800">🚴 ${escapeHtml(r.riderName || r.riderId)}</span>
+                            <span class="font-bold text-emerald-700">Orders: ${r.totalOrders} (${r.deliveredOrders} Delivered) • Earning ₹${(r.riderEarnings || 0).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    bdContainer.innerHTML = `<div class="text-slate-400 text-center py-2 font-medium">No active rider activity for this business day.</div>`;
+                }
+
+                document.getElementById('dayCloseErrorMsg').classList.add('hidden');
+                document.getElementById('modal-riderDayClose').classList.remove('hidden');
+            });
+        }
+
+        function closeDayCloseConfirmationModal() {
+            document.getElementById('modal-riderDayClose').classList.add('hidden');
+        }
+
+        function executeRiderDayClose() {
+            const btn = document.getElementById('btnConfirmCloseDay');
+            const errBox = document.getElementById('dayCloseErrorMsg');
+            if (errBox) errBox.classList.add('hidden');
+
+            const targetDate = currentRiderDayStatus ? currentRiderDayStatus.openBusinessDate : null;
+            if (!targetDate) return;
+
+            if (btn) { btn.disabled = true; btn.innerText = 'CLOSING DAY...'; }
+
+            fetch('/api/rider-orders/day-close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ businessDate: targetDate, closedBy: 'Admin' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (btn) { btn.disabled = false; btn.innerText = 'CLOSE DAY'; }
+                if (data.success) {
+                    alert(`✅ Rider Orders for ${targetDate} closed successfully!`);
+                    closeDayCloseConfirmationModal();
+                    loadRiderOrdersTable();
+                } else {
+                    if (errBox) {
+                        errBox.innerText = data.error || 'Failed to close day.';
+                        errBox.classList.remove('hidden');
+                    } else {
+                        alert(data.error || 'Failed to close day.');
+                    }
+                }
+            })
+            .catch(err => {
+                if (btn) { btn.disabled = false; btn.innerText = 'CLOSE DAY'; }
+                alert('Network error: ' + err.message);
+            });
+        }
+
+        function openRiderDayHistoryModal() {
+            fetch('/api/rider-orders/day-history')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('riderDayHistoryTableBody');
+                if (!tbody) return;
+
+                if (!data.success || !data.history || data.history.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 font-medium">No historical closed business days recorded.</td></tr>`;
+                } else {
+                    tbody.innerHTML = data.history.map(h => `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <td class="p-3 font-mono font-extrabold text-slate-900">${escapeHtml(h.business_date)}</td>
+                            <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-amber-400 border border-slate-700">CLOSED</span></td>
+                            <td class="p-3 font-bold text-slate-800">${h.total_orders}</td>
+                            <td class="p-3 font-bold text-emerald-700">${h.delivered_orders}</td>
+                            <td class="p-3 font-bold text-emerald-700">₹${Number(h.rider_earnings || 0).toFixed(2)}</td>
+                            <td class="p-3 font-semibold text-amber-700">₹${Number(h.cash_collection || 0).toFixed(2)}</td>
+                            <td class="p-3 font-semibold text-blue-700">₹${Number(h.upi_collection || 0).toFixed(2)}</td>
+                            <td class="p-3 text-right">
+                                <button type="button" onclick="loadHistoricalRiderOrders('${h.business_date}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-[11px] shadow-sm transition">VIEW ORDERS</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                document.getElementById('modal-riderDayHistory').classList.remove('hidden');
+            })
+            .catch(err => {
+                console.error('Error fetching rider day history:', err);
+                alert('Error loading day history: ' + err.message);
+            });
+        }
+
+        function closeRiderDayHistoryModal() {
+            document.getElementById('modal-riderDayHistory').classList.add('hidden');
+        }
+
+        function loadHistoricalRiderOrders(businessDate) {
+            closeRiderDayHistoryModal();
+            loadRiderOrdersTable(businessDate);
         }
 
         function getRiderOrderStatusBadge(status) {
@@ -9778,25 +10245,90 @@
             (db.deliveryBoys || []).forEach(r => { ridersMap[r.id] = r.name || r.id; });
             const riderName = ridersMap[order.riderId] || order.riderId || 'Unassigned';
 
-            const formatDt = iso => iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not yet';
+            const formatDt = iso => iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Pending';
+
+            let deliveryStatusHtml = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">Pending Delivery</span>`;
+            if (order.status === 'DELIVERED') {
+                if (order.delayMinutes && order.delayMinutes > 0) {
+                    deliveryStatusHtml = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">🔴 Delayed by ${order.delayMinutes} min</span>`;
+                } else {
+                    deliveryStatusHtml = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 ON TIME</span>`;
+                }
+            }
 
             const html = `
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Order ID:</span><span class="font-mono font-bold text-slate-900">${order.orderId}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Customer Name:</span><span class="font-semibold text-slate-800">${escapeHtml(order.customerName || '-')}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Customer Mobile:</span><a href="tel:${order.customerMobile}" class="font-semibold text-blue-600 hover:underline">📞 ${escapeHtml(order.customerMobile || '-')}</a></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">From Location:</span><span class="font-medium text-slate-800">${escapeHtml(order.fromLocation || '-')}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">To Location:</span><span class="font-medium text-slate-800">${escapeHtml(order.toLocation || '-')}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Food Amount:</span><span class="font-semibold text-slate-800">₹${Number(order.foodAmount || 0).toFixed(2)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Delivery Charge:</span><span class="font-semibold text-slate-800">₹${Number(order.deliveryCharge || 0).toFixed(2)}</span></div>
-                <div class="py-1.5 flex justify-between bg-slate-50 p-2 rounded-xl"><span class="font-bold text-slate-700">Total Amount:</span><span class="font-bold text-blue-700 text-sm">₹${Number(order.totalAmount || 0).toFixed(2)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Assigned Rider:</span><span class="font-semibold text-slate-800">🚴 ${escapeHtml(riderName)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Order Status:</span><span>${getRiderOrderStatusBadge(order.status)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Payment Mode:</span><span class="font-semibold text-slate-800">${order.status === 'DELIVERED' ? (order.paymentMode || 'CASH') : 'Pending'}</span></div>
-                <div class="py-1.5 flex justify-between bg-emerald-50 p-2 rounded-xl"><span class="font-bold text-emerald-800">Rider Earning:</span><span class="font-bold text-emerald-700">₹${Number(order.riderEarning || 0).toFixed(2)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Created Time:</span><span class="text-slate-600">${formatDt(order.createdAt)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Accepted Time:</span><span class="text-slate-600">${formatDt(order.acceptedAt)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Picked Up Time:</span><span class="text-slate-600">${formatDt(order.pickedUpAt)}</span></div>
-                <div class="py-1.5 flex justify-between"><span class="font-bold text-slate-500">Delivered Time:</span><span class="text-slate-600">${formatDt(order.deliveredAt)}</span></div>
+                <div class="space-y-4 text-xs">
+                    <!-- Order & Rider Header -->
+                    <div class="p-3.5 bg-slate-900 text-white rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <div>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order ID</span>
+                                <div class="font-mono font-extrabold text-sm text-amber-400">${escapeHtml(order.orderId)}</div>
+                            </div>
+                            <div>${getRiderOrderStatusBadge(order.status)}</div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-300">Assigned Rider: <strong class="text-white">🚴 ${escapeHtml(riderName)}</strong></span>
+                            <span class="text-slate-300">Business Date: <strong class="text-amber-300">${order.businessDate || '-'}</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Customer & Route Locations -->
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                        <div class="flex justify-between"><span class="font-bold text-slate-500">Customer:</span><span class="font-bold text-slate-900">${escapeHtml(order.customerName || '-')}</span></div>
+                        <div class="flex justify-between"><span class="font-bold text-slate-500">Mobile:</span><a href="tel:${order.customerMobile}" class="font-bold text-blue-600 hover:underline">📞 ${escapeHtml(order.customerMobile || '-')}</a></div>
+                        <div class="flex justify-between"><span class="font-bold text-slate-500">Pickup (From):</span><span class="font-medium text-slate-800 max-w-[220px] text-right">${escapeHtml(order.fromLocation || '-')}</span></div>
+                        <div class="flex justify-between"><span class="font-bold text-slate-500">Delivery (To):</span><span class="font-medium text-slate-800 max-w-[220px] text-right">${escapeHtml(order.toLocation || '-')}</span></div>
+                    </div>
+
+                    <!-- Distance & Analytics -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-1">
+                            <div class="text-[10px] font-bold text-blue-600 uppercase">Rider Travelled</div>
+                            <div class="text-base font-extrabold text-blue-950">${Number(order.distanceKm || 0).toFixed(2)} KM</div>
+                            <div class="text-[9px] text-blue-500 font-semibold">Actual GPS Movement</div>
+                        </div>
+                        <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl space-y-1">
+                            <div class="text-[10px] font-bold text-indigo-600 uppercase">Pickup → Delivery</div>
+                            <div class="text-base font-extrabold text-indigo-950">${Number(order.pickupDeliveryDistanceKm || 0).toFixed(2)} KM</div>
+                            <div class="text-[9px] text-indigo-500 font-semibold">Geographic Distance</div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Timeline & Delay Status -->
+                    <div class="p-3.5 bg-white border border-slate-200 rounded-2xl space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1 flex justify-between items-center">
+                            <span>⏱️ Delivery Timeline &amp; Performance</span>
+                            ${deliveryStatusHtml}
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                            <div><span class="text-slate-500">Assigned:</span> <strong class="text-slate-800">${formatDt(order.assignedAt || order.createdAt)}</strong></div>
+                            <div><span class="text-slate-500">Accepted:</span> <strong class="text-slate-800">${formatDt(order.acceptedAt)}</strong></div>
+                            <div><span class="text-slate-500">Picked Up:</span> <strong class="text-slate-800">${formatDt(order.pickedUpAt)}</strong></div>
+                            <div><span class="text-slate-500">Delivered:</span> <strong class="text-slate-800">${formatDt(order.deliveredAt)}</strong></div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs font-semibold">
+                            <span class="text-slate-600">Total Duration: <strong>${order.deliveryDurationMinutes !== null ? order.deliveryDurationMinutes + ' min' : 'In Progress'}</strong></span>
+                            <span class="text-slate-600">Expected: <strong>${order.expectedDeliveryMinutes || 20} min</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Financials & Earnings -->
+                    <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                        <div class="flex justify-between"><span class="font-semibold text-slate-600">Food Amount:</span><span class="font-bold text-slate-800">₹${Number(order.foodAmount || 0).toFixed(2)}</span></div>
+                        <div class="flex justify-between"><span class="font-semibold text-slate-600">Delivery Charge:</span><span class="font-bold text-amber-700">₹${Number(order.deliveryCharge || 0).toFixed(2)}</span></div>
+                        <div class="flex justify-between pt-1 border-t border-slate-200"><span class="font-extrabold text-slate-900">Total Amount:</span><span class="font-extrabold text-slate-900 text-sm">₹${Number(order.totalAmount || 0).toFixed(2)}</span></div>
+                        <div class="flex justify-between pt-1"><span class="font-semibold text-slate-600">Payment Mode:</span><span class="font-bold text-slate-800">${order.status === 'DELIVERED' ? (order.paymentMode || 'CASH') : 'Pending'}</span></div>
+                        <div class="flex justify-between p-2 bg-emerald-100 border border-emerald-300 rounded-xl mt-1"><span class="font-extrabold text-emerald-900">Rider Earning (Delivery Fee):</span><span class="font-extrabold text-emerald-900 text-sm">₹${Number(order.riderEarning || 0).toFixed(2)}</span></div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="pt-1 flex justify-end space-x-2">
+                        <button type="button" onclick="openRiderOrderRouteModal('${order.orderId}')" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-route"></i><span>VIEW ROUTE MAP</span>
+                        </button>
+                    </div>
+                </div>
             `;
 
             document.getElementById('viewRiderOrderContent').innerHTML = html;
@@ -9805,6 +10337,169 @@
 
         function closeViewRiderOrderModal() {
             document.getElementById('viewRiderOrderModal').classList.add('hidden');
+        }
+
+        function openRiderOrderRouteModal(orderId) {
+            fetch(`/api/rider-orders/${encodeURIComponent(orderId)}/route`)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('routeModalContent');
+                if (!container) return;
+
+                if (!data.success) {
+                    container.innerHTML = `<div class="p-6 text-center text-rose-500 font-semibold">${data.error || 'Failed to load route.'}</div>`;
+                } else if (!data.points || data.points.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-8 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div class="text-2xl">📍</div>
+                            <div class="font-bold text-slate-700">Route Data Unavailable</div>
+                            <div class="text-xs text-slate-500">No GPS tracking points recorded for Order #${escapeHtml(orderId)}.</div>
+                        </div>
+                    `;
+                } else {
+                    let ptsHtml = data.points.map((p, idx) => `
+                        <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-5 h-5 bg-indigo-100 text-indigo-800 rounded-full flex items-center justify-center font-bold text-[10px]">${idx + 1}</span>
+                                <span class="font-mono text-slate-800 font-medium">${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500">${new Date(p.recordedAt).toLocaleTimeString('en-IN')}</div>
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-xs">
+                                    <div class="text-[10px] font-bold text-blue-600 uppercase">Rider Travelled</div>
+                                    <div class="text-base font-extrabold text-blue-950">${data.distanceKm.toFixed(2)} KM</div>
+                                </div>
+                                <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl text-xs">
+                                    <div class="text-[10px] font-bold text-indigo-600 uppercase">Pickup → Delivery</div>
+                                    <div class="text-base font-extrabold text-indigo-950">${data.pickupDeliveryDistanceKm.toFixed(2)} KM</div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <h4 class="text-xs font-bold text-slate-700 uppercase">Tracked GPS Route Points (${data.pointCount})</h4>
+                                <div class="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 border border-slate-200 rounded-2xl">
+                                    ${ptsHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('modal-riderOrderRoute').classList.remove('hidden');
+            })
+            .catch(err => {
+                console.error('Error fetching route:', err);
+                alert('Network error fetching route: ' + err.message);
+            });
+        }
+
+        function closeRiderOrderRouteModal() {
+            document.getElementById('modal-riderOrderRoute').classList.add('hidden');
+        }
+
+        function exportRiderOrdersCsv() {
+            const period = document.getElementById('riderOrderFilterPeriod') ? document.getElementById('riderOrderFilterPeriod').value : 'today';
+            const status = document.getElementById('riderOrderFilterStatus') ? document.getElementById('riderOrderFilterStatus').value : 'ALL';
+            const payment = document.getElementById('riderOrderFilterPayment') ? document.getElementById('riderOrderFilterPayment').value : 'ALL';
+            const rider = document.getElementById('riderOrderFilterRider') ? document.getElementById('riderOrderFilterRider').value : '';
+
+            let url = `/api/rider-orders/export-csv?period=${encodeURIComponent(period)}&status=${encodeURIComponent(status)}&paymentMode=${encodeURIComponent(payment)}`;
+            if (rider) url += `&riderId=${encodeURIComponent(rider)}`;
+            if (selectedHistoricalBusinessDate) url += `&businessDate=${encodeURIComponent(selectedHistoricalBusinessDate)}`;
+
+            window.location.href = url;
+        }
+
+        function loadRiderPerformanceDashboard() {
+            const period = document.getElementById('riderPerfFilterPeriod') ? document.getElementById('riderPerfFilterPeriod').value : 'today';
+            const rider = document.getElementById('riderPerfFilterRider') ? document.getElementById('riderPerfFilterRider').value : 'ALL';
+
+            // Populate rider perf filter dropdown if empty
+            const riderPerfSelect = document.getElementById('riderPerfFilterRider');
+            if (riderPerfSelect && riderPerfSelect.options.length <= 1) {
+                (db.deliveryBoys || []).forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.innerText = r.name || r.id;
+                    riderPerfSelect.appendChild(opt);
+                });
+            }
+
+            let url = `/api/rider-performance?period=${encodeURIComponent(period)}`;
+            if (rider && rider !== 'ALL') url += `&riderId=${encodeURIComponent(rider)}`;
+
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('riderPerformanceContent');
+                if (!container) return;
+
+                if (!data.success || !data.performance || data.performance.length === 0) {
+                    container.innerHTML = `<div class="p-8 text-center text-slate-400 font-medium">No rider performance records found for the selected period.</div>`;
+                    return;
+                }
+
+                container.innerHTML = data.performance.map(p => `
+                    <div class="p-5 bg-white border border-slate-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                            <div class="flex items-center space-x-3">
+                                <div class="p-3 bg-indigo-50 text-indigo-700 rounded-2xl font-extrabold text-base">🚴</div>
+                                <div>
+                                    <h4 class="text-base font-extrabold text-slate-900">${escapeHtml(p.riderName)}</h4>
+                                    <p class="text-xs text-slate-500 font-medium">Rider ID: ${escapeHtml(p.riderId)} • 📞 ${escapeHtml(p.riderMobile || '-')}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-xs rounded-full">
+                                    ${p.onTimeRatePercent}% ON-TIME RATE
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                            <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-0.5">
+                                <div class="text-[10px] font-bold text-blue-600 uppercase">Delivered Orders</div>
+                                <div class="text-base font-extrabold text-blue-950">${p.deliveredOrders}</div>
+                                <div class="text-[9px] text-blue-500 font-semibold">Completed</div>
+                            </div>
+                            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-0.5">
+                                <div class="text-[10px] font-bold text-emerald-700 uppercase">Rider Earnings</div>
+                                <div class="text-base font-extrabold text-emerald-950">₹${p.totalRiderEarnings.toFixed(2)}</div>
+                                <div class="text-[9px] text-emerald-600 font-semibold">Delivery Fee Total</div>
+                            </div>
+                            <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl space-y-0.5">
+                                <div class="text-[10px] font-bold text-amber-800 uppercase">Total Distance</div>
+                                <div class="text-base font-extrabold text-amber-950">${p.totalDistanceKm.toFixed(2)} KM</div>
+                                <div class="text-[9px] text-amber-700 font-semibold">Avg ${p.avgDistancePerOrderKm} KM / Order</div>
+                            </div>
+                            <div class="p-3 bg-purple-50 border border-purple-200 rounded-2xl space-y-0.5">
+                                <div class="text-[10px] font-bold text-purple-700 uppercase">Avg Delivery Time</div>
+                                <div class="text-base font-extrabold text-purple-950">${p.avgDeliveryTimeMinutes} min</div>
+                                <div class="text-[9px] text-purple-600 font-semibold">Accept → Deliver</div>
+                            </div>
+                            <div class="p-3 bg-teal-50 border border-teal-200 rounded-2xl space-y-0.5">
+                                <div class="text-[10px] font-bold text-teal-700 uppercase">On-Time / Delayed</div>
+                                <div class="text-base font-extrabold text-teal-950">${p.onTimeDeliveries} / <span class="text-rose-600">${p.delayedDeliveries}</span></div>
+                                <div class="text-[9px] text-teal-600 font-semibold">Target: 20 min</div>
+                            </div>
+                            <div class="p-3 bg-slate-100 border border-slate-200 rounded-2xl space-y-0.5">
+                                <div class="text-[10px] font-bold text-slate-600 uppercase">Earnings / KM</div>
+                                <div class="text-base font-extrabold text-slate-900">₹${p.earningsPerKm.toFixed(2)}</div>
+                                <div class="text-[9px] text-slate-500 font-semibold">Reporting Metric Only</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(err => {
+                console.error('Error loading rider performance:', err);
+                const container = document.getElementById('riderPerformanceContent');
+                if (container) container.innerHTML = `<div class="p-6 text-center text-rose-500 font-semibold">Error loading performance: ${err.message}</div>`;
+            });
         }
     </script>
 </body>
