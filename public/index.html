@@ -10339,7 +10339,22 @@
             document.getElementById('viewRiderOrderModal').classList.add('hidden');
         }
 
+        let riderRouteMapInstance = null;
+
+        function closeRiderOrderRouteModal() {
+            if (riderRouteMapInstance) {
+                riderRouteMapInstance.remove();
+                riderRouteMapInstance = null;
+            }
+            document.getElementById('modal-riderOrderRoute').classList.add('hidden');
+        }
+
         function openRiderOrderRouteModal(orderId) {
+            if (riderRouteMapInstance) {
+                riderRouteMapInstance.remove();
+                riderRouteMapInstance = null;
+            }
+
             fetch(`/api/rider-orders/${encodeURIComponent(orderId)}/route`)
             .then(res => res.json())
             .then(data => {
@@ -10351,14 +10366,19 @@
                 } else if (!data.points || data.points.length === 0) {
                     container.innerHTML = `
                         <div class="p-8 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-2xl">
-                            <div class="text-2xl">📍</div>
-                            <div class="font-bold text-slate-700">Route Data Unavailable</div>
-                            <div class="text-xs text-slate-500">No GPS tracking points recorded for Order #${escapeHtml(orderId)}.</div>
+                            <div class="text-3xl">📍</div>
+                            <div class="font-bold text-slate-800 text-sm">No GPS route data available for this order.</div>
+                            <div class="text-xs text-slate-500">Order #${escapeHtml(orderId)} has no recorded GPS location tracking points.</div>
                         </div>
                     `;
                 } else {
+                    const orderObj = rawRiderOrdersData.find(x => x.orderId === orderId) || {};
+                    const ridersMap = {};
+                    (db.deliveryBoys || []).forEach(r => { ridersMap[r.id] = r.name || r.id; });
+                    const riderName = ridersMap[orderObj.riderId] || orderObj.riderId || 'Rider';
+
                     let ptsHtml = data.points.map((p, idx) => `
-                        <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                        <div class="p-2 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
                             <div class="flex items-center space-x-2">
                                 <span class="w-5 h-5 bg-indigo-100 text-indigo-800 rounded-full flex items-center justify-center font-bold text-[10px]">${idx + 1}</span>
                                 <span class="font-mono text-slate-800 font-medium">${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}</span>
@@ -10368,25 +10388,136 @@
                     `).join('');
 
                     container.innerHTML = `
-                        <div class="space-y-4">
+                        <div class="space-y-4 text-xs">
+                            <!-- Summary Header Cards -->
                             <div class="grid grid-cols-2 gap-3">
-                                <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-xs">
-                                    <div class="text-[10px] font-bold text-blue-600 uppercase">Rider Travelled</div>
-                                    <div class="text-base font-extrabold text-blue-950">${data.distanceKm.toFixed(2)} KM</div>
+                                <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+                                    <div class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Rider Travelled</div>
+                                    <div class="text-base font-extrabold text-blue-950 mt-0.5">${Number(data.distanceKm || 0).toFixed(2)} KM</div>
+                                    <div class="text-[9px] text-blue-500 font-semibold mt-0.5">Actual GPS Path</div>
                                 </div>
-                                <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl text-xs">
-                                    <div class="text-[10px] font-bold text-indigo-600 uppercase">Pickup → Delivery</div>
-                                    <div class="text-base font-extrabold text-indigo-950">${data.pickupDeliveryDistanceKm.toFixed(2)} KM</div>
+                                <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl">
+                                    <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Pickup → Delivery</div>
+                                    <div class="text-base font-extrabold text-indigo-950 mt-0.5">${Number(data.pickupDeliveryDistanceKm || 0).toFixed(2)} KM</div>
+                                    <div class="text-[9px] text-indigo-500 font-semibold mt-0.5">Geographic Distance</div>
                                 </div>
                             </div>
-                            <div class="space-y-2">
-                                <h4 class="text-xs font-bold text-slate-700 uppercase">Tracked GPS Route Points (${data.pointCount})</h4>
-                                <div class="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 border border-slate-200 rounded-2xl">
+
+                            <!-- Interactive Map Container -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center px-1">
+                                    <span class="font-extrabold text-slate-800 text-xs flex items-center">
+                                        <i class="fa-solid fa-map-location-dot text-indigo-600 mr-1.5"></i>Live Visual GPS Route Map
+                                    </span>
+                                    <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 font-bold rounded-full text-[10px]">
+                                        ${data.pointCount} GPS Points
+                                    </span>
+                                </div>
+                                <div id="riderRouteMapContainer" class="w-full h-72 sm:h-80 rounded-2xl border border-slate-200 shadow-inner z-0 overflow-hidden relative bg-slate-100"></div>
+                            </div>
+
+                            <!-- Summary Details Below Map -->
+                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                                    <div>
+                                        <span class="font-bold text-slate-900 text-xs">🚴 Rider: <strong class="text-blue-700">${escapeHtml(riderName)}</strong></span>
+                                        <span class="text-slate-400 mx-1.5">•</span>
+                                        <span class="font-mono text-slate-600 text-xs">Order: <strong class="text-slate-900">${escapeHtml(data.orderId)}</strong></span>
+                                    </div>
+                                    <div class="font-bold text-indigo-700 text-xs">
+                                        Total GPS Points: ${data.pointCount}
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-[11px] font-semibold text-slate-600">
+                                    <span>Tracked Travelled Distance: <strong class="text-blue-700">${Number(data.distanceKm || 0).toFixed(2)} KM</strong></span>
+                                    <span>Pickup → Delivery Distance: <strong class="text-indigo-700">${Number(data.pickupDeliveryDistanceKm || 0).toFixed(2)} KM</strong></span>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Point Coordinates Accordion -->
+                            <details class="group border border-slate-200 rounded-2xl bg-white overflow-hidden">
+                                <summary class="p-3 font-bold text-slate-700 cursor-pointer flex justify-between items-center group-open:bg-slate-50 select-none">
+                                    <span>View GPS Point Coordinates (${data.pointCount})</span>
+                                    <i class="fa-solid fa-chevron-down text-slate-400 group-open:rotate-180 transition"></i>
+                                </summary>
+                                <div class="p-3 space-y-1.5 max-h-48 overflow-y-auto border-t border-slate-100 bg-slate-50/50">
                                     ${ptsHtml}
                                 </div>
-                            </div>
+                            </details>
                         </div>
                     `;
+
+                    // Initialize Leaflet Interactive Map after DOM update
+                    setTimeout(() => {
+                        try {
+                            const latLngs = data.points.map(p => [Number(p.latitude), Number(p.longitude)]);
+
+                            if (riderRouteMapInstance) {
+                                riderRouteMapInstance.remove();
+                                riderRouteMapInstance = null;
+                            }
+
+                            const map = L.map('riderRouteMapContainer', { zoomControl: true });
+                            riderRouteMapInstance = map;
+
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '© OpenStreetMap'
+                            }).addTo(map);
+
+                            // Draw connected polyline route line
+                            const polyline = L.polyline(latLngs, {
+                                color: '#4f46e5',
+                                weight: 5,
+                                opacity: 0.85,
+                                lineJoin: 'round'
+                            }).addTo(map);
+
+                            // 🟢 START Marker (First Point)
+                            const startIcon = L.divIcon({
+                                className: 'custom-start-marker',
+                                html: `<div style="background:#10b981; color:white; padding:4px 8px; border-radius:8px; font-weight:800; font-size:11px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3); white-space:nowrap;">🟢 START</div>`,
+                                iconSize: [65, 26],
+                                iconAnchor: [32, 13]
+                            });
+                            L.marker(latLngs[0], { icon: startIcon }).addTo(map)
+                                .bindPopup(`<b>🟢 START TRACKING</b><br>Pickup Location<br>Lat: ${latLngs[0][0].toFixed(5)}, Lon: ${latLngs[0][1].toFixed(5)}`);
+
+                            // 🔴 END Marker (Last Point if > 1)
+                            if (latLngs.length > 1) {
+                                const endIcon = L.divIcon({
+                                    className: 'custom-end-marker',
+                                    html: `<div style="background:#ef4444; color:white; padding:4px 8px; border-radius:8px; font-weight:800; font-size:11px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3); white-space:nowrap;">🔴 END</div>`,
+                                    iconSize: [55, 26],
+                                    iconAnchor: [27, 13]
+                                });
+                                L.marker(latLngs[latLngs.length - 1], { icon: endIcon }).addTo(map)
+                                    .bindPopup(`<b>🔴 END TRACKING</b><br>Delivery Location<br>Lat: ${latLngs[latLngs.length - 1][0].toFixed(5)}, Lon: ${latLngs[latLngs.length - 1][1].toFixed(5)}`);
+                            }
+
+                            // Plot intermediate waypoints as small blue dots
+                            for (let i = 1; i < latLngs.length - 1; i++) {
+                                L.circleMarker(latLngs[i], {
+                                    radius: 5,
+                                    color: '#3b82f6',
+                                    fillColor: '#60a5fa',
+                                    fillOpacity: 0.9
+                                }).addTo(map).bindPopup(`<b>GPS Waypoint #${i + 1}</b><br>Time: ${new Date(data.points[i].recordedAt).toLocaleTimeString('en-IN')}`);
+                            }
+
+                            // Fit map bounds to show full route
+                            if (latLngs.length > 1) {
+                                map.fitBounds(polyline.getBounds(), { padding: [35, 35] });
+                            } else {
+                                map.setView(latLngs[0], 15);
+                            }
+
+                            // Recalculate dimensions after modal display
+                            setTimeout(() => { map.invalidateSize(); }, 150);
+                        } catch (mapErr) {
+                            console.error('Error initializing Leaflet map:', mapErr);
+                        }
+                    }, 50);
                 }
 
                 document.getElementById('modal-riderOrderRoute').classList.remove('hidden');
@@ -10398,6 +10529,10 @@
         }
 
         function closeRiderOrderRouteModal() {
+            if (riderRouteMapInstance) {
+                riderRouteMapInstance.remove();
+                riderRouteMapInstance = null;
+            }
             document.getElementById('modal-riderOrderRoute').classList.add('hidden');
         }
 
